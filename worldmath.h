@@ -7,77 +7,69 @@ class Point3D
 {
   int ID;
   static int counter;
-  int x;
-  int y;
-  int z;
+  float x;
+  float y;
+  float z;
 
 public:
   Point3D();
-  Point3D(int, int, int);
-  void setX(int);
-  void setY(int);
-  void setZ(int);
-  int getX() { return x; };
-  int getY() { return y; };
-  int getZ() { return z; };
+  Point3D(float, float, float);
+  void setX(float);
+  void setY(float);
+  void setZ(float);
+  void rotateX(float);
+  void rotateY(float);
+  void rotateZ(float);
+  void translate(float, float, float);
+  void scale(float);
+  float getX() { return x; };
+  float getY() { return y; };
+  float getZ() { return z; };
+  void print();
 };
 
-class Vector3D
+class Matrix
 {
-  int ID;
-  static int counter;
-  Point3D *p1;
-  Point3D *p2;
-  int vx;
-  int vy;
-  int vz;
+  float values[16];
+  bool onebyX, two, three, four;
 
 public:
-  Vector3D();
-  Vector3D(int, int, int, int, int, int);
-  ~Vector3D();
-  void setP1(int, int, int);
-  void setP2(int, int, int);
-  Point3D *getP1()
-  {
-    return p1;
-  };
-  Point3D *getP2()
-  {
-    return p2;
-  };
-  int getVX() { return vx; };
-  int getVY() { return vy; };
-  int getVZ() { return vz; };
-  void draw(Color);
-  int operator*(Vector3D *);
+  Matrix();
+  Matrix(int, int, float, float);
+  Matrix(float *, int);
+  Matrix(Point3D *);
+  void printMatrix();
+  int getSize();
+  float getValue(int);
+  void setSize(int);
+  void set2D();
+  void set3D();
+  void set4D();
+  void clear();
+  Matrix timesByPoint(Point3D *, bool);
+  Matrix operator*(Point3D);
+  Matrix operator*(Matrix);
 };
 
 class Triangle3D
 {
-  Vector3D *lines = new Vector3D[3];
+  int points[3];
 
 public:
-  Triangle3D(Point3D *, Point3D *, Point3D *);
+  Triangle3D();
   ~Triangle3D();
-  Vector3D *getVector(int);
-  bool pointInTriangle(int, int);
-  void draw(Color);
-};
-
-class Shape3D
-{
-  Vector3D *lines;
-  int sides;
-
-public:
-  Shape3D(int, int *);
-  ~Shape3D();
-  Vector3D *getVector(int);
-  void draw(Color);
+  int getPoint(int);
+  int getP1();
+  int getP2();
+  int getP3();
+  void setP1(int);
+  void setP2(int);
+  void setP3(int);
+  // bool pointInTriangle(int, int);
 };
 
 int dotProduct(int, int, int, int, int, int);
-bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
+void drawTriangle(Color, Matrix *, Point3D[]);
+// bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif
