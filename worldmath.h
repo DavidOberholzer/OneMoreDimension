@@ -22,6 +22,8 @@ public:
   void rotateZ(float);
   void translate(float, float, float);
   void scale(float);
+  float dot(Point3D);
+  Point3D cross(Point3D);
   float getX() { return x; };
   float getY() { return y; };
   float getZ() { return z; };
@@ -66,6 +68,26 @@ public:
   void setP2(int);
   void setP3(int);
   // bool pointInTriangle(int, int);
+};
+
+class Quarternion
+{
+  float w, x, y, z;
+
+public:
+  Quarternion();
+  Quarternion(Point3D, float a);
+  float getW() { return w; };
+  float getX() { return x; };
+  float getY() { return y; };
+  float getZ() { return z; };
+  void setW(float);
+  void setX(float);
+  void setY(float);
+  void setZ(float);
+  void print();
+  Quarternion operator*(Quarternion);
+  Point3D operator*(Point3D);
 };
 
 int dotProduct(int, int, int, int, int, int);

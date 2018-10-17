@@ -24,7 +24,7 @@ int main()
                 Point3D p = vertices[t->getPoint(j) - 1];
                 p.rotateY(angle);
                 p.rotateZ(angle);
-                p.translate(0, 0, -4);
+                p.translate(0, 0, -2);
                 movedPoints[j] = p;
             }
             drawTriangle(blue, P, movedPoints);

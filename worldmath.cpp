@@ -60,22 +60,16 @@ void drawTriangle(Color color, Matrix *P, Point3D points[3])
     if (draw)
     {
         graphicsDrawLine(
-            (int)nPoints[0].getX(),
-            (int)nPoints[0].getY(),
-            (int)nPoints[1].getX(),
-            (int)nPoints[1].getY(),
+            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
+            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
             color);
         graphicsDrawLine(
-            (int)nPoints[1].getX(),
-            (int)nPoints[1].getY(),
-            (int)nPoints[2].getX(),
-            (int)nPoints[2].getY(),
+            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
+            (int)nPoints[2].getX(), (int)nPoints[2].getY(),
             color);
         graphicsDrawLine(
-            (int)nPoints[2].getX(),
-            (int)nPoints[2].getY(),
-            (int)nPoints[0].getX(),
-            (int)nPoints[0].getY(),
+            (int)nPoints[2].getX(), (int)nPoints[2].getY(),
+            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
             color);
     }
 }
@@ -149,6 +143,22 @@ void Point3D::scale(float factor)
     this->x = this->x * factor;
     this->y = this->y * factor;
     this->z = this->z * factor;
+}
+
+float Point3D::dot(Point3D p)
+{
+    return this->x * p.getX() + this->y * p.getY() + this->z * p.getZ();
+}
+
+Point3D Point3D::cross(Point3D p)
+{
+    Point3D r;
+
+    r.setX(this->y * p.getZ() - this->z * p.getY());
+    r.setY(this->z * p.getX() - this->x * p.getZ());
+    r.setZ(this->x * p.getY() - this->y * p.getX());
+
+    return r;
 }
 
 void Point3D::print()
@@ -484,4 +494,80 @@ Matrix Matrix::operator*(Matrix m2)
     f.values[15] = this->values[15] * m2.values[15];
     f.setSize(this->getSize());
     return f;
+}
+
+Quarternion::Quarternion()
+{
+    this->w = 0;
+    this->x = 0;
+    this->y = 0;
+    this->z = 0;
+}
+
+Quarternion::Quarternion(Point3D p, float a)
+{
+    this->w = cos(a / 2);
+    this->x = p.getX() * sin(a / 2);
+    this->y = p.getY() * sin(a / 2);
+    this->z = p.getZ() * sin(a / 2);
+}
+
+void Quarternion::setW(float w)
+{
+    this->w = w;
+}
+
+void Quarternion::setX(float x)
+{
+    this->x = x;
+}
+
+void Quarternion::setY(float y)
+{
+    this->y = y;
+}
+
+void Quarternion::setZ(float z)
+{
+    this->z = z;
+}
+
+Quarternion Quarternion::operator*(Quarternion q)
+{
+    Quarternion result;
+
+    Point3D p1 = Point3D(this->x, this->y, this->z);
+    Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ());
+    Point3D cross = p1.cross(p2);
+    cross.print();
+
+    result.setW(this->w * q.getW() + p1.dot(p2));
+    result.setX(this->x * q.getW() + q.getX() * this->w + cross.getX());
+    result.setY(this->y * q.getW() + q.getY() * this->w + cross.getY());
+    result.setZ(this->z * q.getW() + q.getZ() * this->w + cross.getZ());
+
+    return result;
+}
+
+Point3D Quarternion::operator*(Point3D p)
+{
+    Point3D result;
+
+    Point3D pq = Point3D(this->x, this->y, this->z);
+    Point3D cross1 = pq.cross(p);
+    Point3D cross2 = pq.cross(cross1);
+
+    result.setX(p.getX() + cross1.getX() * 2 * this->w + cross2.getX() * 2);
+    result.setY(p.getY() + cross1.getY() * 2 * this->w + cross2.getY() * 2);
+    result.setZ(p.getZ() + cross1.getZ() * 2 * this->w + cross2.getZ() * 2);
+
+    return result;
+}
+
+void Quarternion::print()
+{
+    cout << "w: " << this->w << endl;
+    cout << "x: " << this->x << endl;
+    cout << "y: " << this->y << endl;
+    cout << "z: " << this->z << endl;
 }

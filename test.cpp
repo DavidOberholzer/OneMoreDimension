@@ -69,4 +69,12 @@ int main()
 	// Load Cube Object
 	LoadObject((char *)"cube.txt");
 	UnloadData();
+
+	// Rotate with quarternion
+	Quarternion q1 = Quarternion(Point3D(0, 1, 0), M_PI / 2);
+	q1.print();
+	Quarternion q2 = Quarternion(Point3D(1, 0, 0), M_PI / 4);
+	q2.print();
+	Quarternion q3 = q2 * q1;
+	q3.print();
 }
