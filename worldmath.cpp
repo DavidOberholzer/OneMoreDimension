@@ -74,6 +74,42 @@ void drawTriangle(Color color, Matrix *P, Point3D points[3])
     }
 }
 
+void drawVector(Color color, Matrix *P, Point3D points[2])
+{
+    Matrix projectedPoints[2];
+    Point3D nPoints[2];
+    bool draw = true;
+    float x, y, z;
+    for (int i = 0; i < 2; i++)
+    {
+        Point3D *p = &points[i];
+        projectedPoints[i] = P->timesByPoint(p, false);
+        if (fabs(projectedPoints[i].getValue(0)) > fabs(p->getZ()) ||
+            fabs(projectedPoints[i].getValue(4)) > fabs(p->getZ()) ||
+            fabs(projectedPoints[i].getValue(8)) > fabs(p->getZ()))
+        {
+            draw = false;
+            break;
+        }
+        else
+        {
+            x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
+            y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
+            z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
+            nPoints[i].setX((x + 1) * WIDTH / 2);
+            nPoints[i].setY((y + 1) * HEIGHT / 2);
+            nPoints[i].setZ(z);
+        }
+    }
+    if (draw)
+    {
+        graphicsDrawLine(
+            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
+            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
+            color);
+    }
+}
+
 int Point3D::counter = 0;
 
 Point3D::Point3D()
@@ -107,8 +143,19 @@ void Point3D::setZ(float z)
     this->z = z;
 }
 
+void Point3D::rotateQ(float pitch, float yaw, float angle)
+{
+    // Quarternion Rotation
+    Quarternion q = Quarternion(pitch, yaw, angle);
+    Point3D r = q * Point3D(this->x, this->y, this->z);
+    this->x = r.getX();
+    this->y = r.getY();
+    this->z = r.getZ();
+}
+
 void Point3D::rotateX(float angle)
 {
+    // Euler Theorem
     float oldY = this->y,
           oldZ = this->z;
     this->y = oldY * cos(angle) - oldZ * sin(angle);
@@ -117,6 +164,7 @@ void Point3D::rotateX(float angle)
 
 void Point3D::rotateY(float angle)
 {
+    // Euler Theorem
     float oldX = this->x,
           oldZ = this->z;
     this->x = oldX * cos(angle) - oldZ * sin(angle);
@@ -125,6 +173,7 @@ void Point3D::rotateY(float angle)
 
 void Point3D::rotateZ(float angle)
 {
+    // Euler Theorem
     float oldX = this->x,
           oldY = this->y;
     this->x = oldX * cos(angle) - oldY * sin(angle);
@@ -506,10 +555,23 @@ Quarternion::Quarternion()
 
 Quarternion::Quarternion(Point3D p, float a)
 {
-    this->w = cos(a / 2);
-    this->x = p.getX() * sin(a / 2);
-    this->y = p.getY() * sin(a / 2);
-    this->z = p.getZ() * sin(a / 2);
+    float angle = a / 2;
+    float sAngle = sin(angle);
+    this->w = cos(angle);
+    this->x = p.getX() * sAngle;
+    this->y = p.getY() * sAngle;
+    this->z = p.getZ() * sAngle;
+}
+
+Quarternion::Quarternion(float pitch, float yaw, float a)
+{
+    float angle = a / 2;
+    float sAngle = sin(angle);
+    this->w = cos(angle);
+    float y = pitch != 0.0 ? sin(pitch) : 1;
+    this->x = y * cos(yaw) * sAngle;
+    this->y = sin(pitch) * sAngle;
+    this->z = y * sin(yaw) * sAngle;
 }
 
 void Quarternion::setW(float w)
@@ -532,14 +594,22 @@ void Quarternion::setZ(float z)
     this->z = z;
 }
 
+Quarternion Quarternion::inverse()
+{
+    Quarternion result;
+    result.setW(this->w);
+    result.setX(-this->x);
+    result.setY(-this->y);
+    result.setZ(-this->z);
+    return result;
+}
+
 Quarternion Quarternion::operator*(Quarternion q)
 {
     Quarternion result;
-
     Point3D p1 = Point3D(this->x, this->y, this->z);
     Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ());
     Point3D cross = p1.cross(p2);
-    cross.print();
 
     result.setW(this->w * q.getW() + p1.dot(p2));
     result.setX(this->x * q.getW() + q.getX() * this->w + cross.getX());
@@ -552,15 +622,31 @@ Quarternion Quarternion::operator*(Quarternion q)
 Point3D Quarternion::operator*(Point3D p)
 {
     Point3D result;
+    // Quarternion pq;
+    // pq.setW(0);
+    // pq.setX(p.getX());
+    // pq.setY(p.getY());
+    // pq.setZ(p.getZ());
+    // Quarternion q = (*this);
+    // Quarternion qt = q * pq * q.inverse();
+    // Point3D result = Point3D(qt.getX(), qt.getY(), qt.getZ());
 
+    // return result;
     Point3D pq = Point3D(this->x, this->y, this->z);
-    Point3D cross1 = pq.cross(p);
-    Point3D cross2 = pq.cross(cross1);
+    float dot1 = pq.dot(p);
+    float dot2 = pq.dot(pq);
+    Point3D cross = pq.cross(p);
+    float w2 = this->w * this->w;
+    result.setX(2.0 * dot1 * pq.getX() + (w2 - dot2) * p.getX() + 2.0 * this->w * cross.getX());
+    result.setY(2.0 * dot1 * pq.getY() + (w2 - dot2) * p.getY() + 2.0 * this->w * cross.getY());
+    result.setZ(2.0 * dot1 * pq.getZ() + (w2 - dot2) * p.getZ() + 2.0 * this->w * cross.getZ());
 
-    result.setX(p.getX() + cross1.getX() * 2 * this->w + cross2.getX() * 2);
-    result.setY(p.getY() + cross1.getY() * 2 * this->w + cross2.getY() * 2);
-    result.setZ(p.getZ() + cross1.getZ() * 2 * this->w + cross2.getZ() * 2);
+    // Point3D cross1 = pq.cross(p);
+    // Point3D cross2 = pq.cross(cross1);
 
+    // result.setX(p.getX() + 2.0 * this->w * cross1.getX() + 2.0 * cross2.getX());
+    // result.setY(p.getY() + 2.0 * this->w * cross1.getY() + 2.0 * cross2.getY());
+    // result.setZ(p.getZ() + 2.0 * this->w * cross1.getZ() + 2.0 * cross2.getZ());
     return result;
 }
 

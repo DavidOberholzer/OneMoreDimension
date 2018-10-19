@@ -17,6 +17,7 @@ public:
   void setX(float);
   void setY(float);
   void setZ(float);
+  void rotateQ(float, float, float);
   void rotateX(float);
   void rotateY(float);
   void rotateZ(float);
@@ -76,7 +77,8 @@ class Quarternion
 
 public:
   Quarternion();
-  Quarternion(Point3D, float a);
+  Quarternion(Point3D, float);
+  Quarternion(float, float, float);
   float getW() { return w; };
   float getX() { return x; };
   float getY() { return y; };
@@ -86,12 +88,14 @@ public:
   void setY(float);
   void setZ(float);
   void print();
+  Quarternion inverse();
   Quarternion operator*(Quarternion);
   Point3D operator*(Point3D);
 };
 
 int dotProduct(int, int, int, int, int, int);
 void drawTriangle(Color, Matrix *, Point3D[]);
+void drawVector(Color, Matrix *, Point3D[]);
 // bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif

@@ -1,6 +1,9 @@
 #include <math.h>
+#include <iostream>
 #include "worldmath.h"
 #include "data_io.h"
+
+using namespace std;
 
 int main()
 {
@@ -70,11 +73,32 @@ int main()
 	LoadObject((char *)"cube.txt");
 	UnloadData();
 
+	// Dot Product
+	float dot = Point3D(1, 2, 3).dot(Point3D(1, 5, 7));
+	cout << "Dot Product Result: " << dot << endl;
+
+	// Cross Product
+	Point3D crs = Point3D(4, 9, 3).cross(Point3D(-9, -2, 4));
+	crs.print();
+
 	// Rotate with quarternion
+	Quarternion q0 = Quarternion(Point3D(0, 0, 1), 0);
 	Quarternion q1 = Quarternion(Point3D(0, 1, 0), M_PI / 2);
-	q1.print();
 	Quarternion q2 = Quarternion(Point3D(1, 0, 0), M_PI / 4);
-	q2.print();
-	Quarternion q3 = q2 * q1;
-	q3.print();
+	Quarternion q3 = q2 * q1 * q0;
+	Point3D v1 = Point3D(1, 0, 0);
+	Point3D r1 = q1 * v1;
+	r1.print();
+	Point3D r2 = q2 * v1;
+	r2.print();
+	Point3D r3 = q3 * v1;
+	r3.print();
+
+	// Compound Quarternion rotation
+	Quarternion q4 = Quarternion(Point3D(1, 1, 1), M_PI / 2);
+	Point3D r4 = q4 * Point3D(-1, 1, -1);
+	r4.print();
+
+	Quarternion q5 = q4.inverse() * q4;
+	q5.print();
 }
