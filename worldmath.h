@@ -24,6 +24,7 @@ public:
   void translate(float, float, float);
   void scale(float);
   float dot(Point3D);
+  Point3D scaledVector(float);
   Point3D cross(Point3D);
   float getX() { return x; };
   float getY() { return y; };
@@ -49,7 +50,8 @@ public:
   void set3D();
   void set4D();
   void clear();
-  Matrix timesByPoint(Point3D *, bool);
+  Point3D xPoint(Point3D);
+  Matrix projectPoint(Point3D, bool);
   Matrix operator*(Point3D);
   Matrix operator*(Matrix);
 };
@@ -83,6 +85,7 @@ public:
   float getX() { return x; };
   float getY() { return y; };
   float getZ() { return z; };
+  bool isValid();
   void setW(float);
   void setX(float);
   void setY(float);
@@ -94,8 +97,9 @@ public:
 };
 
 int dotProduct(int, int, int, int, int, int);
-void drawTriangle(Color, Matrix *, Point3D[]);
-void drawVector(Color, Matrix *, Point3D[]);
+void drawTriangle(Color, Matrix *, Matrix *, Point3D[]);
+Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
+// void drawVector(Color, Matrix *, Point3D[]);
 // bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif

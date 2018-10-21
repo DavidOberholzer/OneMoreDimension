@@ -95,10 +95,10 @@ int main()
 	r3.print();
 
 	// Compound Quarternion rotation
-	Quarternion q4 = Quarternion(Point3D(1, 1, 1), M_PI / 2);
+	Quarternion q4 = Quarternion(M_PI / 4, M_PI / 4, M_PI / 2);
 	Point3D r4 = q4 * Point3D(-1, 1, -1);
 	r4.print();
 
-	Quarternion q5 = q4.inverse() * q4;
+	Quarternion q5 = Quarternion(M_PI / 4, M_PI / 2, M_PI / 2);
 	q5.print();
 }

@@ -6,37 +6,75 @@
 
 using namespace std;
 
-float zR = 0.0;
-float xR = 0.0;
-float yR = 0.0;
 bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+Point3D U = Point3D(0, 1, 0);
+Point3D R = Point3D(1, 0, 0);
+Point3D D = Point3D(0, 0, 1);
+float dx = 0.0;
+float dy = 0.0;
+float dz = 0.0;
+float speed = 0.05;
+Quarternion t;
 
-void movement()
+void cameraMovement()
 {
+    Quarternion u, r, d;
+    bool ub = false, rb = false, db = false;
+    Point3D ws = D.scaledVector(speed);
+    Point3D ad = R.scaledVector(speed);
+    if (keysPressed[0])
+    {
+        dx -= ws.getX();
+        dy -= ws.getY();
+        dz -= ws.getZ();
+    }
+    if (keysPressed[1])
+    {
+        dx += ws.getX();
+        dy += ws.getY();
+        dz += ws.getZ();
+    }
+    if (keysPressed[2])
+    {
+        dx -= ad.getX();
+        dy -= ad.getY();
+        dz -= ad.getZ();
+    }
+    if (keysPressed[3])
+    {
+        dx += ad.getX();
+        dy += ad.getY();
+        dz += ad.getZ();
+    }
     if (keysPressed[4])
     {
-        zR -= 0.02;
+        u = Quarternion(U, 0.02);
     }
     if (keysPressed[5])
     {
-        zR += 0.02;
+        u = Quarternion(U, -0.02);
     }
     if (keysPressed[6])
     {
-        xR -= 0.02;
+        r = Quarternion(R, -0.02);
     }
     if (keysPressed[7])
     {
-        xR += 0.02;
+        r = Quarternion(R, 0.02);
     }
     if (keysPressed[8])
     {
-        yR -= 0.02;
+        d = Quarternion(D, -0.02);
     }
     if (keysPressed[9])
     {
-        yR += 0.02;
+        d = Quarternion(D, 0.02);
     }
+
+    t = d * r * u;
+    U = t * U;
+    R = t * R;
+    D = t * D;
 }
 
 int main()
@@ -46,13 +84,12 @@ int main()
     LoadObject((char *)"cube.txt");
     Matrix *P = new Matrix(1, 10, M_PI * 5.0 / 12.0, 3.0 / 4.0);
     Point3D origin = Point3D(0, 0, 0);
-    Point3D U = Point3D(0, -1, 0);
-    Point3D R = Point3D(1, 0, 0);
-    Point3D D = Point3D(0, 0, 1);
+
     float angle = 0.0;
     while (!done)
     {
         graphicsFrameReady();
+        Matrix V = viewMatrix(U, R, D, dx, dy, dz);
         for (int i = 0; i < numTriangles; i++)
         {
             Triangle3D *t = &triangles[i];
@@ -60,11 +97,11 @@ int main()
             for (int j = 0; j < 3; j++)
             {
                 Point3D p = vertices[t->getPoint(j) - 1];
-                p.rotateQ(M_PI / 4, M_PI / 2, angle);
+                p.rotateQ(-M_PI / 4, M_PI / 4, angle);
                 p.translate(0, 0, -3);
                 movedPoints[j] = p;
             }
-            drawTriangle(blue, P, movedPoints);
+            drawTriangle(red, P, &V, movedPoints);
         }
         angle += 0.01;
         graphicsFrameDraw();
@@ -78,31 +115,38 @@ int main()
                 break;
             case SDL_KEYUP:
             case SDL_KEYDOWN:
+                bool eType = event.type == SDL_KEYDOWN;
                 switch (event.key.keysym.sym)
                 {
                 case SDLK_w:
-                    keysPressed[0] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[0] = eType;
                     break;
                 case SDLK_s:
-                    keysPressed[1] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[1] = eType;
                     break;
                 case SDLK_a:
-                    keysPressed[2] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[2] = eType;
                     break;
                 case SDLK_d:
-                    keysPressed[3] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[3] = eType;
                     break;
                 case SDLK_g:
-                    keysPressed[4] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[4] = eType;
                     break;
                 case SDLK_j:
-                    keysPressed[5] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[5] = eType;
                     break;
                 case SDLK_y:
-                    keysPressed[6] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[6] = eType;
                     break;
                 case SDLK_h:
-                    keysPressed[7] = event.type == SDL_KEYDOWN ? true : false;
+                    keysPressed[7] = eType;
+                    break;
+                case SDLK_t:
+                    keysPressed[8] = eType;
+                    break;
+                case SDLK_u:
+                    keysPressed[9] = eType;
                     break;
                 case SDLK_ESCAPE:
                     done = true;
@@ -110,7 +154,7 @@ int main()
                 }
             }
         }
-        movement();
+        cameraMovement();
         SDL_Delay(10);
     }
     graphicsShutdown();

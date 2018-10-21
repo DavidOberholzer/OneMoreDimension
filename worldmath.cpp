@@ -30,7 +30,7 @@ int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
     return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-void drawTriangle(Color color, Matrix *P, Point3D points[3])
+void drawTriangle(Color color, Matrix *P, Matrix *V, Point3D points[3])
 {
     Matrix projectedPoints[3];
     Point3D nPoints[3];
@@ -38,11 +38,11 @@ void drawTriangle(Color color, Matrix *P, Point3D points[3])
     float x, y, z;
     for (int i = 0; i < 3; i++)
     {
-        Point3D *p = &points[i];
-        projectedPoints[i] = P->timesByPoint(p, false);
-        if (fabs(projectedPoints[i].getValue(0)) > fabs(p->getZ()) ||
-            fabs(projectedPoints[i].getValue(4)) > fabs(p->getZ()) ||
-            fabs(projectedPoints[i].getValue(8)) > fabs(p->getZ()))
+        Point3D p = V->xPoint(points[i]);
+        projectedPoints[i] = P->projectPoint(p, false);
+        if (fabs(projectedPoints[i].getValue(0)) > fabs(p.getZ()) ||
+            fabs(projectedPoints[i].getValue(4)) > fabs(p.getZ()) ||
+            fabs(projectedPoints[i].getValue(8)) > fabs(p.getZ()))
         {
             draw = false;
             break;
@@ -74,47 +74,75 @@ void drawTriangle(Color color, Matrix *P, Point3D points[3])
     }
 }
 
-void drawVector(Color color, Matrix *P, Point3D points[2])
+// void drawVector(Color color, Matrix *P, Point3D points[2])
+// {
+//     Matrix projectedPoints[2];
+//     Point3D nPoints[2];
+//     bool draw = true;
+//     float x, y, z;
+//     for (int i = 0; i < 2; i++)
+//     {
+//         Point3D *p = &points[i];
+//         projectedPoints[i] = P->projectPoint(p, false);
+//         if (fabs(projectedPoints[i].getValue(0)) > fabs(p->getZ()) ||
+//             fabs(projectedPoints[i].getValue(4)) > fabs(p->getZ()) ||
+//             fabs(projectedPoints[i].getValue(8)) > fabs(p->getZ()))
+//         {
+//             draw = false;
+//             break;
+//         }
+//         else
+//         {
+//             x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
+//             y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
+//             z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
+//             nPoints[i].setX((x + 1) * WIDTH / 2);
+//             nPoints[i].setY((y + 1) * HEIGHT / 2);
+//             nPoints[i].setZ(z);
+//         }
+//     }
+//     if (draw)
+//     {
+//         graphicsDrawLine(
+//             (int)nPoints[0].getX(), (int)nPoints[0].getY(),
+//             (int)nPoints[1].getX(), (int)nPoints[1].getY(),
+//             color);
+//     }
+// }
+
+Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
 {
-    Matrix projectedPoints[2];
-    Point3D nPoints[2];
-    bool draw = true;
-    float x, y, z;
-    for (int i = 0; i < 2; i++)
-    {
-        Point3D *p = &points[i];
-        projectedPoints[i] = P->timesByPoint(p, false);
-        if (fabs(projectedPoints[i].getValue(0)) > fabs(p->getZ()) ||
-            fabs(projectedPoints[i].getValue(4)) > fabs(p->getZ()) ||
-            fabs(projectedPoints[i].getValue(8)) > fabs(p->getZ()))
-        {
-            draw = false;
-            break;
-        }
-        else
-        {
-            x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
-            y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
-            z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
-            nPoints[i].setX((x + 1) * WIDTH / 2);
-            nPoints[i].setY((y + 1) * HEIGHT / 2);
-            nPoints[i].setZ(z);
-        }
-    }
-    if (draw)
-    {
-        graphicsDrawLine(
-            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-            color);
-    }
+    float values[16];
+    for (int i = 0; i < 16; i++)
+        values[i] = 0;
+    // Rotation
+    values[0] = R.getX();
+    values[1] = R.getY();
+    values[2] = R.getZ();
+    values[4] = U.getX();
+    values[5] = U.getY();
+    values[6] = U.getZ();
+    values[8] = D.getX();
+    values[9] = D.getY();
+    values[10] = D.getZ();
+    values[15] = 1;
+    Matrix rotation = Matrix(values, 4);
+    // Translation
+    for (int i = 0; i < 16; i++)
+        values[i] = 0;
+    values[0] = 1;
+    values[3] = -dx;
+    values[5] = 1;
+    values[7] = -dy;
+    values[10] = 1;
+    values[11] = -dz;
+    values[15] = 1;
+    Matrix translation = Matrix(values, 4);
+    return rotation * translation;
 }
-
-int Point3D::counter = 0;
 
 Point3D::Point3D()
 {
-    ID = this->counter++;
     x = 0;
     y = 0;
     z = 0;
@@ -122,7 +150,6 @@ Point3D::Point3D()
 
 Point3D::Point3D(float x, float y, float z)
 {
-    ID = this->counter++;
     this->x = x;
     this->y = y;
     this->z = z;
@@ -199,6 +226,11 @@ float Point3D::dot(Point3D p)
     return this->x * p.getX() + this->y * p.getY() + this->z * p.getZ();
 }
 
+Point3D Point3D::scaledVector(float scale)
+{
+    return Point3D(this->x * scale, this->y * scale, this->z * scale);
+}
+
 Point3D Point3D::cross(Point3D p)
 {
     Point3D r;
@@ -212,7 +244,7 @@ Point3D Point3D::cross(Point3D p)
 
 void Point3D::print()
 {
-    printf("Point %d\n", this->ID);
+    printf("Point\n");
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
@@ -497,22 +529,31 @@ int Matrix::getSize()
         return 4;
 }
 
-Matrix Matrix::timesByPoint(Point3D *p, bool keepSize)
+Point3D Matrix::xPoint(Point3D p)
 {
-    Matrix newMatrix = Matrix();
+    Point3D newPoint;
+    newPoint.setX(this->values[0] * p.getX() + this->values[1] * p.getY() + this->values[2] * p.getZ() + this->values[3] * 1);
+    newPoint.setY(this->values[4] * p.getX() + this->values[5] * p.getY() + this->values[6] * p.getZ() + this->values[7] * 1);
+    newPoint.setZ(this->values[8] * p.getX() + this->values[9] * p.getY() + this->values[10] * p.getZ() + this->values[11] * 1);
+    return newPoint;
+}
+
+Matrix Matrix::projectPoint(Point3D p, bool keepSize)
+{
+    Matrix newMatrix;
     if (keepSize)
     {
-        newMatrix.values[0] = this->values[0] * p->getX() + this->values[1] * p->getY() + this->values[2] * p->getZ() + this->values[3] * 1;
-        newMatrix.values[5] = this->values[4] * p->getX() + this->values[5] * p->getY() + this->values[6] * p->getZ() + this->values[7] * 1;
-        newMatrix.values[10] = this->values[8] * p->getX() + this->values[9] * p->getY() + this->values[10] * p->getZ() + this->values[11] * 1;
-        newMatrix.values[15] = this->values[12] * p->getX() + this->values[13] * p->getY() + this->values[14] * p->getZ() + this->values[15] * 1;
+        newMatrix.values[0] = this->values[0] * p.getX() + this->values[1] * p.getY() + this->values[2] * p.getZ() + this->values[3] * 1;
+        newMatrix.values[5] = this->values[4] * p.getX() + this->values[5] * p.getY() + this->values[6] * p.getZ() + this->values[7] * 1;
+        newMatrix.values[10] = this->values[8] * p.getX() + this->values[9] * p.getY() + this->values[10] * p.getZ() + this->values[11] * 1;
+        newMatrix.values[15] = this->values[12] * p.getX() + this->values[13] * p.getY() + this->values[14] * p.getZ() + this->values[15] * 1;
     }
     else
     {
-        newMatrix.values[0] = this->values[0] * p->getX() + this->values[1] * p->getY() + this->values[2] * p->getZ() + this->values[3] * 1;
-        newMatrix.values[4] = this->values[4] * p->getX() + this->values[5] * p->getY() + this->values[6] * p->getZ() + this->values[7] * 1;
-        newMatrix.values[8] = this->values[8] * p->getX() + this->values[9] * p->getY() + this->values[10] * p->getZ() + this->values[11] * 1;
-        newMatrix.values[12] = this->values[12] * p->getX() + this->values[13] * p->getY() + this->values[14] * p->getZ() + this->values[15] * 1;
+        newMatrix.values[0] = this->values[0] * p.getX() + this->values[1] * p.getY() + this->values[2] * p.getZ() + this->values[3] * 1;
+        newMatrix.values[4] = this->values[4] * p.getX() + this->values[5] * p.getY() + this->values[6] * p.getZ() + this->values[7] * 1;
+        newMatrix.values[8] = this->values[8] * p.getX() + this->values[9] * p.getY() + this->values[10] * p.getZ() + this->values[11] * 1;
+        newMatrix.values[12] = this->values[12] * p.getX() + this->values[13] * p.getY() + this->values[14] * p.getZ() + this->values[15] * 1;
     }
     return newMatrix;
 }
@@ -525,22 +566,26 @@ Matrix Matrix::operator*(Matrix m2)
         exit(1);
     }
     Matrix f = Matrix();
-    f.values[0] = this->values[0] * m2.values[0];
-    f.values[1] = this->values[1] * m2.values[4];
-    f.values[2] = this->values[2] * m2.values[8];
-    f.values[3] = this->values[3] * m2.values[12];
-    f.values[4] = this->values[4] * m2.values[1];
-    f.values[5] = this->values[5] * m2.values[5];
-    f.values[6] = this->values[6] * m2.values[9];
-    f.values[7] = this->values[7] * m2.values[13];
-    f.values[8] = this->values[8] * m2.values[2];
-    f.values[9] = this->values[9] * m2.values[6];
-    f.values[10] = this->values[10] * m2.values[10];
-    f.values[11] = this->values[11] * m2.values[14];
-    f.values[12] = this->values[12] * m2.values[3];
-    f.values[13] = this->values[13] * m2.values[7];
-    f.values[14] = this->values[14] * m2.values[11];
-    f.values[15] = this->values[15] * m2.values[15];
+    f.values[0] = this->values[0] * m2.values[0] + this->values[1] * m2.values[4] + this->values[2] * m2.values[8] + this->values[3] * m2.values[12];
+    f.values[1] = this->values[0] * m2.values[1] + this->values[1] * m2.values[5] + this->values[2] * m2.values[9] + this->values[3] * m2.values[13];
+    f.values[2] = this->values[0] * m2.values[2] + this->values[1] * m2.values[6] + this->values[2] * m2.values[10] + this->values[3] * m2.values[14];
+    f.values[3] = this->values[0] * m2.values[3] + this->values[1] * m2.values[7] + this->values[2] * m2.values[11] + this->values[3] * m2.values[15];
+
+    f.values[4] = this->values[4] * m2.values[0] + this->values[5] * m2.values[4] + this->values[6] * m2.values[8] + this->values[7] * m2.values[12];
+    f.values[5] = this->values[4] * m2.values[1] + this->values[5] * m2.values[5] + this->values[6] * m2.values[9] + this->values[7] * m2.values[13];
+    f.values[6] = this->values[4] * m2.values[2] + this->values[5] * m2.values[6] + this->values[6] * m2.values[10] + this->values[7] * m2.values[14];
+    f.values[7] = this->values[4] * m2.values[3] + this->values[5] * m2.values[7] + this->values[6] * m2.values[11] + this->values[7] * m2.values[15];
+
+    f.values[8] = this->values[8] * m2.values[0] + this->values[9] * m2.values[4] + this->values[10] * m2.values[8] + this->values[11] * m2.values[12];
+    f.values[9] = this->values[8] * m2.values[1] + this->values[9] * m2.values[5] + this->values[10] * m2.values[9] + this->values[11] * m2.values[13];
+    f.values[10] = this->values[8] * m2.values[2] + this->values[9] * m2.values[6] + this->values[10] * m2.values[10] + this->values[11] * m2.values[14];
+    f.values[11] = this->values[8] * m2.values[3] + this->values[9] * m2.values[7] + this->values[10] * m2.values[11] + this->values[11] * m2.values[15];
+
+    f.values[12] = this->values[12] * m2.values[0] + this->values[13] * m2.values[4] + this->values[14] * m2.values[8] + this->values[15] * m2.values[12];
+    f.values[13] = this->values[12] * m2.values[1] + this->values[13] * m2.values[5] + this->values[14] * m2.values[9] + this->values[15] * m2.values[13];
+    f.values[14] = this->values[12] * m2.values[2] + this->values[13] * m2.values[6] + this->values[14] * m2.values[10] + this->values[15] * m2.values[14];
+    f.values[15] = this->values[12] * m2.values[3] + this->values[13] * m2.values[7] + this->values[14] * m2.values[11] + this->values[15] * m2.values[15];
+
     f.setSize(this->getSize());
     return f;
 }
@@ -568,10 +613,15 @@ Quarternion::Quarternion(float pitch, float yaw, float a)
     float angle = a / 2;
     float sAngle = sin(angle);
     this->w = cos(angle);
-    float y = pitch != 0.0 ? sin(pitch) : 1;
-    this->x = y * cos(yaw) * sAngle;
+    float h = cos(pitch);
+    this->x = h * cos(yaw) * sAngle;
     this->y = sin(pitch) * sAngle;
-    this->z = y * sin(yaw) * sAngle;
+    this->z = h * sin(yaw) * sAngle;
+}
+
+bool Quarternion::isValid()
+{
+    return !this->w ? false : true;
 }
 
 void Quarternion::setW(float w)
@@ -607,14 +657,31 @@ Quarternion Quarternion::inverse()
 Quarternion Quarternion::operator*(Quarternion q)
 {
     Quarternion result;
-    Point3D p1 = Point3D(this->x, this->y, this->z);
-    Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ());
-    Point3D cross = p1.cross(p2);
+    if (q.isValid() && this->isValid())
+    {
+        Point3D p1 = Point3D(this->x, this->y, this->z);
+        Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ());
+        Point3D cross = p1.cross(p2);
 
-    result.setW(this->w * q.getW() + p1.dot(p2));
-    result.setX(this->x * q.getW() + q.getX() * this->w + cross.getX());
-    result.setY(this->y * q.getW() + q.getY() * this->w + cross.getY());
-    result.setZ(this->z * q.getW() + q.getZ() * this->w + cross.getZ());
+        result.setW(this->w * q.getW() + p1.dot(p2));
+        result.setX(this->x * q.getW() + q.getX() * this->w + cross.getX());
+        result.setY(this->y * q.getW() + q.getY() * this->w + cross.getY());
+        result.setZ(this->z * q.getW() + q.getZ() * this->w + cross.getZ());
+    }
+    else if (q.isValid())
+    {
+        result.setW(q.getW());
+        result.setX(q.getX());
+        result.setY(q.getY());
+        result.setZ(q.getZ());
+    }
+    else
+    {
+        result.setW(this->w);
+        result.setX(this->x);
+        result.setY(this->y);
+        result.setZ(this->z);
+    }
 
     return result;
 }
@@ -632,14 +699,21 @@ Point3D Quarternion::operator*(Point3D p)
     // Point3D result = Point3D(qt.getX(), qt.getY(), qt.getZ());
 
     // return result;
-    Point3D pq = Point3D(this->x, this->y, this->z);
-    float dot1 = pq.dot(p);
-    float dot2 = pq.dot(pq);
-    Point3D cross = pq.cross(p);
-    float w2 = this->w * this->w;
-    result.setX(2.0 * dot1 * pq.getX() + (w2 - dot2) * p.getX() + 2.0 * this->w * cross.getX());
-    result.setY(2.0 * dot1 * pq.getY() + (w2 - dot2) * p.getY() + 2.0 * this->w * cross.getY());
-    result.setZ(2.0 * dot1 * pq.getZ() + (w2 - dot2) * p.getZ() + 2.0 * this->w * cross.getZ());
+    if (this->w)
+    {
+        Point3D pq = Point3D(this->x, this->y, this->z);
+        float dot1 = pq.dot(p);
+        float dot2 = pq.dot(pq);
+        Point3D cross = pq.cross(p);
+        float w2 = this->w * this->w;
+        result.setX(2.0 * dot1 * pq.getX() + (w2 - dot2) * p.getX() + 2.0 * this->w * cross.getX());
+        result.setY(2.0 * dot1 * pq.getY() + (w2 - dot2) * p.getY() + 2.0 * this->w * cross.getY());
+        result.setZ(2.0 * dot1 * pq.getZ() + (w2 - dot2) * p.getZ() + 2.0 * this->w * cross.getZ());
+    }
+    else
+    {
+        result = p;
+    }
 
     // Point3D cross1 = pq.cross(p);
     // Point3D cross2 = pq.cross(cross1);
