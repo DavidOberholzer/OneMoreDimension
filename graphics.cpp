@@ -7,7 +7,7 @@ using namespace std;
 void graphicsStartup()
 {
     cout << "Starting SDL Window!" << endl;
-    window = SDL_CreateWindow("OneMoreDimension", 0, 0, WIDTH, HEIGHT, 0);
+    window = SDL_CreateWindow("OneMoreDimension", 0, 0, WIDTH, HEIGHT, SDL_WINDOW_FULLSCREEN);
     surface = SDL_GetWindowSurface(window);
     renderer = SDL_CreateRenderer(window, -1, 0);
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
