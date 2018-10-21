@@ -30,7 +30,36 @@ int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
     return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-void drawTriangle(Color color, Matrix *P, Matrix *V, Point3D points[3])
+void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
+{
+    int startX, endX;
+    float startZ, endZ;
+    float dyt = (points[2].getY() - points[0].getY());
+    for (int y = (int)points[0].getY(); y < (int)points[1].getY(); y++)
+    {
+        float t = (y - (int)points[0].getY()) / dyt;
+        float t2 = (y - (int)points[0].getY()) / (points[1].getY() - points[0].getY());
+        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
+        int x2 = points[1].getX() * t2 + points[0].getX() * (1 - t2);
+        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
+        float z2 = points[1].getZ() * t2 + points[0].getZ() * (1 - t2);
+        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+        // graphicsDrawLine(x1, y, x2, y, cIndex);
+    }
+    for (int y = (int)points[1].getY(); y < (int)points[2].getY(); y++)
+    {
+        float t = (y - (int)points[0].getY()) / (points[2].getY() - points[0].getY());
+        float t2 = (y - (int)points[1].getY()) / (points[2].getY() - points[1].getY());
+        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
+        int x2 = points[2].getX() * t2 + points[1].getX() * (1 - t2);
+        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
+        float z2 = points[2].getZ() * t2 + points[1].getZ() * (1 - t2);
+        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+        // graphicsDrawLine(x1, y, x2, y, cIndex);
+    }
+}
+
+void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBuffer[WIDTH * HEIGHT])
 {
     Matrix projectedPoints[3];
     Point3D nPoints[3];
@@ -52,25 +81,34 @@ void drawTriangle(Color color, Matrix *P, Matrix *V, Point3D points[3])
             x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
             y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
             z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
-            nPoints[i].setX((x + 1) * WIDTH / 2);
-            nPoints[i].setY((y + 1) * HEIGHT / 2);
+            nPoints[i].setX((x + 1) * WIDTHD2);
+            nPoints[i].setY((y + 1) * HEIGHTD2);
             nPoints[i].setZ(z);
         }
     }
     if (draw)
     {
-        graphicsDrawLine(
-            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-            color);
-        graphicsDrawLine(
-            (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-            (int)nPoints[2].getX(), (int)nPoints[2].getY(),
-            color);
-        graphicsDrawLine(
-            (int)nPoints[2].getX(), (int)nPoints[2].getY(),
-            (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-            color);
+        for (int i = 0; i < 3; i++)
+        {
+            for (int j = i; j < 3; j++)
+            {
+                if (nPoints[j].getY() < nPoints[i].getY())
+                    swap(nPoints[j], nPoints[i]);
+            }
+        }
+        fillTriangle(nPoints, cIndex, zBuffer);
+        // graphicsDrawLine(
+        //     (int)nPoints[0].getX(), (int)nPoints[0].getY(),
+        //     (int)nPoints[1].getX(), (int)nPoints[1].getY(),
+        //     cIndex);
+        // graphicsDrawLine(
+        //     (int)nPoints[1].getX(), (int)nPoints[1].getY(),
+        //     (int)nPoints[2].getX(), (int)nPoints[2].getY(),
+        //     cIndex);
+        // graphicsDrawLine(
+        //     (int)nPoints[2].getX(), (int)nPoints[2].getY(),
+        //     (int)nPoints[0].getX(), (int)nPoints[0].getY(),
+        //     cIndex);
     }
 }
 
@@ -346,36 +384,6 @@ void Triangle3D::setP3(int p3)
 //     else
 //     {
 //         cout << "Triangle is outside of screen!" << endl;
-//     }
-// }
-
-/* Simple Triangle line filling!!! */
-
-// void Triangle3D::draw(Color color)
-// {
-//     Point3D *point1 = lines[0].getP1();
-//     Point3D *point2 = lines[0].getP2();
-//     Point3D *point3 = lines[2].getP1();
-
-//     int totalYDiff = point3->getY() - point1->getY();
-//     int totalXDiff = point3->getX() - point1->getX();
-//     int segmentDiffTop = point2->getY() - point1->getY();
-//     int segmentDiffBottom = point3->getY() - point2->getY();
-//     for (int y = point1->getY(); y <= point2->getY(); y++)
-//     {
-//         float totalRatio = (float)(y - point1->getY()) / totalYDiff;
-//         float segmentRatio = (float)(y - point1->getY()) / segmentDiffTop;
-//         int x1 = point1->getX() + totalXDiff * totalRatio;
-//         int x2 = point1->getX() + (point2->getX() - point1->getX()) * segmentRatio;
-//         graphicsDrawLine(x1, y, x2, y, white);
-//     }
-//     for (int y = point2->getY(); y <= point3->getY(); y++)
-//     {
-//         float totalRatio = (float)(y - point1->getY()) / totalYDiff;
-//         float segmentRatio = (float)(y - point2->getY()) / segmentDiffBottom;
-//         int x1 = point1->getX() + totalXDiff * totalRatio;
-//         int x2 = point2->getX() + (point3->getX() - point2->getX()) * segmentRatio;
-//         graphicsDrawLine(x1, y, x2, y, white);
 //     }
 // }
 

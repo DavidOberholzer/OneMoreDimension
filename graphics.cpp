@@ -36,13 +36,50 @@ void graphicsFrameDraw()
     SDL_RenderPresent(renderer);
 }
 
-void graphicsDrawPoint(int x, int y, Color color) {
+void graphicsDrawPoint(int x, int y, int cIndex)
+{
+    struct Color color = colors[cIndex];
     SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
     SDL_RenderDrawPoint(renderer, x, y);
 }
 
-void graphicsDrawLine(int x1, int y1, int x2, int y2, Color color)
+void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, int cIndex, float zBuffer[WIDTH * HEIGHT])
 {
+    struct Color color = colors[cIndex];
+    SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+    int startX, endX;
+    float startZ, endZ;
+    if (x1 < x2)
+    {
+        startX = x1;
+        endX = x2;
+        startZ = z1;
+        endZ = z2;
+    }
+    else
+    {
+        startX = x2;
+        endX = x1;
+        startZ = z2;
+        endZ = z1;
+    }
+
+    for (int x = startX; x <= endX; x++)
+    {
+        float t = (x - startX) / (float)(endX - startX);
+        float z = endZ * t + startZ * (1 - t);
+        int index = y * WIDTH + x;
+        if (zBuffer[index] > z)
+        {
+            zBuffer[index] = z;
+            SDL_RenderDrawPoint(renderer, x, y);
+        }
+    }
+}
+
+void graphicsDrawLine(int x1, int y1, int x2, int y2, int cIndex)
+{
+    struct Color color = colors[cIndex];
     SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
     bool steep = false;
     if (abs(x1 - x2) < abs(y1 - y2))

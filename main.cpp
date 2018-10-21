@@ -1,5 +1,8 @@
 #include <iostream>
 #include <SDL2/SDL.h>
+#include <time.h>
+#include <unistd.h>
+
 #include "graphics.h"
 #include "worldmath.h"
 #include "data_io.h"
@@ -84,10 +87,20 @@ int main()
     LoadObject((char *)"cube.txt");
     Matrix *P = new Matrix(1, 10, M_PI * 5.0 / 12.0, 3.0 / 4.0);
     Point3D origin = Point3D(0, 0, 0);
-
+    time_t start, end;
     float angle = 0.0;
+    float zBuffer[WIDTH * HEIGHT];
     while (!done)
     {
+        start = clock();
+        for (int i = 0; i < HEIGHT; i++)
+        {
+            for (int j = 0; j < WIDTH; j++)
+            {
+                int index = i * WIDTH + j;
+                zBuffer[index] = 1.0;
+            }
+        }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
         for (int i = 0; i < numTriangles; i++)
@@ -101,7 +114,7 @@ int main()
                 p.translate(0, 0, -3);
                 movedPoints[j] = p;
             }
-            drawTriangle(red, P, &V, movedPoints);
+            drawTriangle(floor(i / 2.0), P, &V, movedPoints, zBuffer);
         }
         angle += 0.01;
         graphicsFrameDraw();
@@ -155,7 +168,13 @@ int main()
             }
         }
         cameraMovement();
-        SDL_Delay(10);
+        end = clock();
+        double diff = difftime(end, start);
+        if (diff < 16667)
+        {
+            int wait = 16667 - diff;
+            usleep(wait);
+        }
     }
     graphicsShutdown();
     return 0;
