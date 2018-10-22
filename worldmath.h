@@ -99,7 +99,6 @@ public:
 int dotProduct(int, int, int, int, int, int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[], float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
-// void drawVector(Color, Matrix *, Point3D[]);
 // bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif

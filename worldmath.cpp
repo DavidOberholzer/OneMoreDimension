@@ -44,7 +44,6 @@ void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
         float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
         float z2 = points[1].getZ() * t2 + points[0].getZ() * (1 - t2);
         graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
-        // graphicsDrawLine(x1, y, x2, y, cIndex);
     }
     for (int y = (int)points[1].getY(); y < (int)points[2].getY(); y++)
     {
@@ -55,7 +54,6 @@ void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
         float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
         float z2 = points[2].getZ() * t2 + points[1].getZ() * (1 - t2);
         graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
-        // graphicsDrawLine(x1, y, x2, y, cIndex);
     }
 }
 
@@ -97,56 +95,8 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBu
             }
         }
         fillTriangle(nPoints, cIndex, zBuffer);
-        // graphicsDrawLine(
-        //     (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-        //     (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-        //     cIndex);
-        // graphicsDrawLine(
-        //     (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-        //     (int)nPoints[2].getX(), (int)nPoints[2].getY(),
-        //     cIndex);
-        // graphicsDrawLine(
-        //     (int)nPoints[2].getX(), (int)nPoints[2].getY(),
-        //     (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-        //     cIndex);
     }
 }
-
-// void drawVector(Color color, Matrix *P, Point3D points[2])
-// {
-//     Matrix projectedPoints[2];
-//     Point3D nPoints[2];
-//     bool draw = true;
-//     float x, y, z;
-//     for (int i = 0; i < 2; i++)
-//     {
-//         Point3D *p = &points[i];
-//         projectedPoints[i] = P->projectPoint(p, false);
-//         if (fabs(projectedPoints[i].getValue(0)) > fabs(p->getZ()) ||
-//             fabs(projectedPoints[i].getValue(4)) > fabs(p->getZ()) ||
-//             fabs(projectedPoints[i].getValue(8)) > fabs(p->getZ()))
-//         {
-//             draw = false;
-//             break;
-//         }
-//         else
-//         {
-//             x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
-//             y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
-//             z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
-//             nPoints[i].setX((x + 1) * WIDTH / 2);
-//             nPoints[i].setY((y + 1) * HEIGHT / 2);
-//             nPoints[i].setZ(z);
-//         }
-//     }
-//     if (draw)
-//     {
-//         graphicsDrawLine(
-//             (int)nPoints[0].getX(), (int)nPoints[0].getY(),
-//             (int)nPoints[1].getX(), (int)nPoints[1].getY(),
-//             color);
-//     }
-// }
 
 Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
 {
@@ -431,7 +381,7 @@ void Matrix::setSize(int size)
         this->set4D();
         break;
     default:
-        printf("Invalid Matrix size (valid: 2, 3, 4)!");
+        cout << "Invalid Matrix size (valid: 2, 3, 4)!" << endl;
         exit(1);
     }
 }
@@ -487,7 +437,7 @@ Matrix::Matrix(Point3D *vertex)
 
 void Matrix::printMatrix()
 {
-    printf("Matrix\n");
+    cout << "Matrix" << endl;
     if (this->onebyX)
     {
         int length = this->two ? 2 : this->three ? 3 : 4;
@@ -524,7 +474,7 @@ void Matrix::printMatrix()
         printf("-------------------------\n");
         printf("%.2f | %.2f | %.2f | %.2f\n", this->values[12], this->values[13], this->values[14], this->values[15]);
     }
-    printf("Matrix End\n\n");
+    cout << "Matrix End" << endl << endl;
 }
 
 int Matrix::getSize()
@@ -570,7 +520,7 @@ Matrix Matrix::operator*(Matrix m2)
 {
     if (this->getSize() != m2.getSize())
     {
-        printf("Matrix sizes differ! Cannot multiply.");
+        cout << "Matrix sizes differ! Cannot multiply." << endl;
         exit(1);
     }
     Matrix f = Matrix();
@@ -697,16 +647,7 @@ Quarternion Quarternion::operator*(Quarternion q)
 Point3D Quarternion::operator*(Point3D p)
 {
     Point3D result;
-    // Quarternion pq;
-    // pq.setW(0);
-    // pq.setX(p.getX());
-    // pq.setY(p.getY());
-    // pq.setZ(p.getZ());
-    // Quarternion q = (*this);
-    // Quarternion qt = q * pq * q.inverse();
-    // Point3D result = Point3D(qt.getX(), qt.getY(), qt.getZ());
-
-    // return result;
+    // Only if a rotation angle is present.
     if (this->w)
     {
         Point3D pq = Point3D(this->x, this->y, this->z);
@@ -722,13 +663,6 @@ Point3D Quarternion::operator*(Point3D p)
     {
         result = p;
     }
-
-    // Point3D cross1 = pq.cross(p);
-    // Point3D cross2 = pq.cross(cross1);
-
-    // result.setX(p.getX() + 2.0 * this->w * cross1.getX() + 2.0 * cross2.getX());
-    // result.setY(p.getY() + 2.0 * this->w * cross1.getY() + 2.0 * cross2.getY());
-    // result.setZ(p.getZ() + 2.0 * this->w * cross1.getZ() + 2.0 * cross2.getZ());
     return result;
 }
 
