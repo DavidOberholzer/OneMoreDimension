@@ -129,6 +129,23 @@ Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
     return rotation * translation;
 }
 
+void drawCube(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
+{
+    for (int i = 0; i < numTriangles; i++)
+    {
+        Triangle3D *t = &triangles[i];
+        Point3D movedPoints[3];
+        for (int j = 0; j < 3; j++)
+        {
+            Point3D p = vertices[t->getPoint(j) - 1];
+            p.rotateQ(pitch, yaw, rAngle);
+            p.translate(dx, dy, dz);
+            movedPoints[j] = p;
+        }
+        drawTriangle(floor(i / 2.0), P, V, movedPoints, zBuffer);
+    }
+}
+
 Point3D::Point3D()
 {
     x = 0;
@@ -287,56 +304,6 @@ void Triangle3D::setP3(int p3)
     this->points[2] = p3;
 }
 
-// bool Triangle3D::pointInTriangle(int x, int y)
-// {
-//     Vector3D *j = new Vector3D(
-//         this->points[0].getX(), this->points[0].getY(), this->points[0].getZ(),
-//         this->points[2].getX(), this->points[2].getY(), this->points[2].getZ());
-//     Vector3D *k = new Vector3D(
-//         this->points[0].getX(), this->points[0].getY(), this->points[0].getZ(),
-//         this->points[1].getX(), this->points[1].getY(), this->points[1].getZ());
-//     return pointInside(x, y, this->points, j, k);
-// }
-
-// /* Barycentric Triangle filling!!! */
-
-// void Triangle3D::draw(Color color)
-// {
-//     Point3D *points[3] = {lines[0].getP1(), lines[0].getP2(), lines[2].getP1()};
-//     int yBox[2] = {max(points[0]->getY(), 0), min(points[2]->getY(), HEIGHT)};
-//     if (yBox[0] < yBox[1])
-//     {
-//         int xBox[2] = {WIDTH, 0};
-//         for (int i = 0; i < 3; i++)
-//         {
-//             xBox[0] = max(0, min(xBox[0], points[i]->getX()));
-//             xBox[1] = min(WIDTH, max(xBox[1], points[i]->getX()));
-//         }
-//         if (xBox[0] >= xBox[1])
-//         {
-//             cout << "Triangle is outside of screen!" << endl;
-//         }
-//         else
-//         {
-//             for (int i = xBox[0]; i <= xBox[1]; i++)
-//             {
-//                 for (int j = yBox[0]; j < yBox[1]; j++)
-//                 {
-//                     bool draw = this->pointInTriangle(i, j);
-//                     if (draw)
-//                     {
-//                         graphicsDrawPoint(i, j, color);
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     else
-//     {
-//         cout << "Triangle is outside of screen!" << endl;
-//     }
-// }
-
 void Matrix::clear()
 {
     for (int i = 0; i < 16; i++)
@@ -474,7 +441,8 @@ void Matrix::printMatrix()
         printf("-------------------------\n");
         printf("%.2f | %.2f | %.2f | %.2f\n", this->values[12], this->values[13], this->values[14], this->values[15]);
     }
-    cout << "Matrix End" << endl << endl;
+    cout << "Matrix End" << endl
+         << endl;
 }
 
 int Matrix::getSize()

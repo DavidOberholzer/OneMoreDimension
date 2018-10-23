@@ -5,10 +5,8 @@
 #include "worldmath.h"
 
 using namespace std;
-
-Point3D *vertices;
-Triangle3D *triangles;
-int numVertices, numTriangles;
+Object *objects;
+int numObjects;
 
 void LoadObject(char *filename)
 {
@@ -21,7 +19,7 @@ void LoadObject(char *filename)
 		exit(1);
 	}
 	char Buffer[256], word[32], *ptr;
-	float x, y, z;
+	float x, y, z, u1, v1, u2, v2, u3, v3;
 	int n, p1, p2, p3;
 	Point3D *p;
 	Triangle3D *t;

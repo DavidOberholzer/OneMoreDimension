@@ -103,19 +103,8 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-        for (int i = 0; i < numTriangles; i++)
-        {
-            Triangle3D *t = &triangles[i];
-            Point3D movedPoints[3];
-            for (int j = 0; j < 3; j++)
-            {
-                Point3D p = vertices[t->getPoint(j) - 1];
-                p.rotateQ(-M_PI / 4, M_PI / 4, angle);
-                p.translate(0, 0, -3);
-                movedPoints[j] = p;
-            }
-            drawTriangle(floor(i / 2.0), P, &V, movedPoints, zBuffer);
-        }
+        drawCube(0, 0, 0, -1, 0, -3, P, &V, zBuffer);
+        drawCube(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;

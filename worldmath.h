@@ -73,6 +73,22 @@ public:
   // bool pointInTriangle(int, int);
 };
 
+class Object
+{
+  char *name;
+  Point3D *vertices;
+  Triangle3D *triangles;
+  int numVertices, numTriangles;
+
+public:
+  Object();
+  Object(char *);
+  ~Object();
+  Point3D *getVertices();
+  Triangle3D *getTriangles();
+  void drawObject(float, float, float, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
+};
+
 class Quarternion
 {
   float w, x, y, z;
@@ -99,6 +115,7 @@ public:
 int dotProduct(int, int, int, int, int, int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[], float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
+void drawCube(float, float, float, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
 // bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif
