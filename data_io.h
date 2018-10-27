@@ -3,10 +3,8 @@
 
 #include "worldmath.h"
 
-extern Point3D *vertices;
-extern Triangle3D *triangles;
-extern int numVertices;
-extern int numTriangles;
+extern Object *objects;
+extern int numObjects;
 
 void LoadObject(char *);
 void UnloadData();

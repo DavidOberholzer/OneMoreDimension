@@ -22,6 +22,6 @@ triangle 1 4 8 0.0 0.0 1.0 0.0 1.0 1.0 1
 triangle 2 6 7 0.0 0.0 0.0 1.0 1.0 1.0 3
 triangle 2 3 7 0.0 0.0 1.0 0.0 1.0 1.0 3
 
-texture dirt.pcx
-texture dirt_side.pcx
-texture grass_top.pcx
+#texture dirt.pcx
+#texture dirt_side.pcx
+#texture grass_top.pcx

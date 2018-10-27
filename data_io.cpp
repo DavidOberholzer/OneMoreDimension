@@ -7,9 +7,19 @@
 using namespace std;
 Object *objects;
 int numObjects;
+Point3D *vertices;
+int numVertices = 0;
+Triangle3D *triangles;
+int numTriangles = 0;
 
 void LoadObject(char *filename)
 {
+	Object *o;
+	objects = (Object *)realloc(objects, ++numObjects * sizeof(*objects));
+	o = &objects[numObjects - 1];
+	o->name = filename;
+	o->numVertices = 0;
+	o->numTriangles = 0;
 	char dir[256] = "objects/";
 	strcat(dir, filename);
 	FILE *data = fopen(dir, "rt");
@@ -21,6 +31,11 @@ void LoadObject(char *filename)
 	char Buffer[256], word[32], *ptr;
 	float x, y, z, u1, v1, u2, v2, u3, v3;
 	int n, p1, p2, p3;
+
+	vertices = (Point3D *)malloc(0);
+	numVertices = 0;
+	triangles = (Triangle3D *)malloc(0);
+	numTriangles = 0;
 	Point3D *p;
 	Triangle3D *t;
 	while (fgets(Buffer, sizeof Buffer, data))
@@ -32,6 +47,7 @@ void LoadObject(char *filename)
 			{
 			// Load Vertices
 			case 'v':
+				o->numVertices++;
 				vertices = (Point3D *)realloc(vertices, ++numVertices * sizeof(*vertices));
 				p = &vertices[numVertices - 1];
 				sscanf(ptr += n, "%f%f%f%n", &x, &y, &z, &n);
@@ -41,6 +57,7 @@ void LoadObject(char *filename)
 				break;
 			// Load Triangles
 			case 't':
+				o->numTriangles++;
 				triangles = (Triangle3D *)realloc(triangles, ++numTriangles * sizeof(*triangles));
 				t = &triangles[numTriangles - 1];
 				sscanf(ptr += n, "%d%d%d%n", &p1, &p2, &p3, &n);
@@ -51,12 +68,13 @@ void LoadObject(char *filename)
 			}
 		}
 	}
+	o->mallocVertices(vertices);
+	o->mallocTriangles(triangles);
 	cout << "Loaded object " << dir << endl;
 }
 
 void UnloadData()
 {
-	delete vertices;
-	delete triangles;
+	delete objects;
 	cout << "Unloaded all data" << endl;
 }

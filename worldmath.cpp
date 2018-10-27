@@ -129,23 +129,6 @@ Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
     return rotation * translation;
 }
 
-void drawCube(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
-{
-    for (int i = 0; i < numTriangles; i++)
-    {
-        Triangle3D *t = &triangles[i];
-        Point3D movedPoints[3];
-        for (int j = 0; j < 3; j++)
-        {
-            Point3D p = vertices[t->getPoint(j) - 1];
-            p.rotateQ(pitch, yaw, rAngle);
-            p.translate(dx, dy, dz);
-            movedPoints[j] = p;
-        }
-        drawTriangle(floor(i / 2.0), P, V, movedPoints, zBuffer);
-    }
-}
-
 Point3D::Point3D()
 {
     x = 0;
@@ -514,6 +497,61 @@ Matrix Matrix::operator*(Matrix m2)
 
     f.setSize(this->getSize());
     return f;
+}
+
+Object::Object()
+{
+    this->name = (char *)"No Name";
+    this->numVertices = 0;
+    this->numTriangles = 0;
+}
+
+Object::Object(char *name)
+{
+    this->name = name;
+    this->numVertices = 0;
+    this->numTriangles = 0;
+}
+
+Object::~Object()
+{
+    delete this->vertices;
+    delete this->triangles;
+}
+
+void Object::mallocVertices(Point3D *vertices)
+{
+    this->vertices = (Point3D *)malloc(this->numVertices * sizeof(*this->vertices));
+    for (int i = 0; i < this->numVertices; i++)
+    {
+        this->vertices[i] = vertices[i];
+    }
+}
+
+void Object::mallocTriangles(Triangle3D *triangles)
+{
+    this->triangles = (Triangle3D *)malloc(this->numTriangles * sizeof(*this->triangles));
+    for (int i = 0; i < this->numTriangles; i++)
+    {
+        this->triangles[i] = triangles[i];
+    }
+}
+
+void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
+{
+    for (int i = 0; i < this->numTriangles; i++)
+    {
+        Triangle3D *t = &this->triangles[i];
+        Point3D movedPoints[3];
+        for (int j = 0; j < 3; j++)
+        {
+            Point3D p = this->vertices[t->getPoint(j) - 1];
+            p.rotateQ(pitch, yaw, rAngle);
+            p.translate(dx, dy, dz);
+            movedPoints[j] = p;
+        }
+        drawTriangle(floor(i / 2.0), P, V, movedPoints, zBuffer);
+    }
 }
 
 Quarternion::Quarternion()

@@ -85,8 +85,8 @@ int main()
     bool done = false;
     graphicsStartup();
     LoadObject((char *)"cube.txt");
+    cout << "YO" << endl;
     Matrix *P = new Matrix(1, 10, M_PI * 5.0 / 12.0, 3.0 / 4.0);
-    Point3D origin = Point3D(0, 0, 0);
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -103,8 +103,8 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-        drawCube(0, 0, 0, -1, 0, -3, P, &V, zBuffer);
-        drawCube(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -1, 0, -3, P, &V, zBuffer);
+        objects[0].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;
