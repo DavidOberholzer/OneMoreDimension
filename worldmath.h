@@ -2,6 +2,7 @@
 #define WORLDMATH_H_INCLUDED
 #include "SDL2/SDL.h"
 #include "graphics.h"
+#include "structures.h"
 
 class Point3D
 {
@@ -58,7 +59,8 @@ public:
 
 class Triangle3D
 {
-  int points[3];
+  int points[3], texture;
+  float uTexels[3], vTexels[3];
 
 public:
   Triangle3D();
@@ -67,10 +69,15 @@ public:
   int getP1();
   int getP2();
   int getP3();
+  float getUTexel(int);
+  float getVTexel(int);
+  int getTexture();
   void setP1(int);
   void setP2(int);
   void setP3(int);
-  // bool pointInTriangle(int, int);
+  void setUTexel(int, float);
+  void setVTexel(int, float);
+  void setTexture(int);
 };
 
 class Object
@@ -114,6 +121,5 @@ public:
 int dotProduct(int, int, int, int, int, int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[], float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
-// bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif

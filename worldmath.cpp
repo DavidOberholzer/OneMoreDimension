@@ -4,27 +4,6 @@
 
 using namespace std;
 
-// bool pointInside(int x, int y, Point3D *A, Vector3D *j, Vector3D *k)
-// {
-//     Vector3D *i = new Vector3D(x, y, 0, A->getX(), A->getY(), 0);
-//     int ij = dotProduct(i->getVX(), i->getVY(), 0, j->getVX(), j->getVY(), 0);
-//     int ik = dotProduct(i->getVX(), i->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     int jj = dotProduct(j->getVX(), j->getVY(), 0, j->getVX(), j->getVY(), 0);
-//     int jk = dotProduct(j->getVX(), j->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     int kk = dotProduct(k->getVX(), k->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     float denominator = (jk * jk) - (kk * jj);
-//     if (denominator == 0)
-//     {
-//         cout << "Denominator equals 0";
-//     }
-//     else
-//     {
-//         float u = -((ik * jk) - (ij * kk)) / denominator;
-//         float v = -((ij * jk) - (ik * jj)) / denominator;
-//         return u >= 0 && v >= 0 && (u + v) <= 1;
-//     }
-// }
-
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
@@ -272,6 +251,31 @@ int Triangle3D::getP3()
     return this->points[2];
 }
 
+float Triangle3D::getUTexel(int index)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "U Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    return this->uTexels[index];
+}
+
+float Triangle3D::getVTexel(int index)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "V Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    return this->vTexels[index];
+}
+
+int Triangle3D::getTexture()
+{
+    return this->texture;
+}
+
 void Triangle3D::setP1(int p1)
 {
     this->points[0] = p1;
@@ -285,6 +289,31 @@ void Triangle3D::setP2(int p2)
 void Triangle3D::setP3(int p3)
 {
     this->points[2] = p3;
+}
+
+void Triangle3D::setUTexel(int index, float value)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "U Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    this->uTexels[index] = value;
+}
+
+void Triangle3D::setVTexel(int index, float value)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "V Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    this->vTexels[index] = value;
+}
+
+void Triangle3D::setTexture(int index)
+{
+    this->texture = index;
 }
 
 void Matrix::clear()
