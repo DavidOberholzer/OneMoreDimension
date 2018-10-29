@@ -4,6 +4,17 @@
 typedef unsigned char BYTE;
 typedef short DBYTE;
 
+// Gradients Structure
+struct gradients
+{
+	float oneOverZ[3];
+	float uOverZ[3];
+	float vOverZ[3];
+	float dOneOverZdX, dOneOverZdY;
+	float dUOverZdX, dUOverZdY;
+	float dVOverZdX, dVOverZdY;
+};
+
 // Pixel Structure
 struct pixel
 {

@@ -1,12 +1,56 @@
 #include <iostream>
 #include "worldmath.h"
 #include "data_io.h"
+#include "structures.h"
 
 using namespace std;
+
+struct gradients currentGradients;
 
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
+}
+
+void updateGradients(Point3D points[3], float u[3], float v[3])
+{
+    float ooz0, ooz1, ooz2;
+    float uoz0, uoz1, uoz2;
+    float voz0, voz1, voz2;
+    float c02, c12;
+
+    ooz0 = 1 / points[0].getZ();
+    ooz1 = 1 / points[1].getZ();
+    ooz2 = 1 / points[2].getZ();
+    uoz0 = u[0] * ooz0;
+    uoz1 = u[1] * ooz1;
+    uoz2 = u[2] * ooz2;
+    voz0 = v[0] * ooz0;
+    voz1 = v[1] * ooz1;
+    voz2 = v[2] * ooz2;
+
+    float y02 = points[0].getY() - points[2].getY();
+    float y12 = points[1].getY() - points[2].getY();
+    float x02 = points[0].getX() - points[2].getX();
+    float x12 = points[1].getX() - points[2].getX();
+
+    // 1/z gradients
+    c02 = ooz0 - ooz2;
+    c12 = ooz1 - ooz2;
+    currentGradients.dOneOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    currentGradients.dOneOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+
+    // u/z gradients
+    c02 = uoz0 - uoz2;
+    c12 = uoz1 - uoz2;
+    currentGradients.dUOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    currentGradients.dUOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+
+    // v/z gradients
+    c02 = voz0 - voz2;
+    c12 = voz1 - voz2;
+    currentGradients.dVOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    currentGradients.dVOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
 }
 
 void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
