@@ -83,7 +83,7 @@ void fillTriangle(Point3D points[3], float u0, float v0, float ooz0, int tex, in
         float dy = y - (int)points[0].getY();
         // Linear Interpolation of X, Y coordinates down line 0 - 2.
         float t = dy / (points[2].getY() - points[0].getY());
-        float t2 = dy / (points[2].getY() - points[1].getY());
+        float t2 = (y - (int)points[1].getY()) / (points[2].getY() - points[1].getY());
         int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
         int x2 = points[2].getX() * t2 + points[1].getX() * (1 - t2);
         float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
@@ -106,6 +106,8 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
 {
     Matrix projectedPoints[3];
     Point3D nPoints[3];
+    float uTemp[3] = {u[0], u[1], u[2]};
+    float vTemp[3] = {v[0], v[1], v[2]};
     bool draw = true;
     float x, y, z;
     for (int i = 0; i < 3; i++)
@@ -138,8 +140,8 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
                 if (nPoints[j].getY() < nPoints[i].getY())
                 {
                     swap(nPoints[j], nPoints[i]);
-                    swap(u[j], u[i]);
-                    swap(v[j], v[i]);
+                    swap(uTemp[j], uTemp[i]);
+                    swap(vTemp[j], vTemp[i]);
                 }
             }
         }
@@ -639,7 +641,7 @@ void Object::mallocTriangles(Triangle3D *triangles)
 
 void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
 {
-    for (int i = 0; i < 1; i++)
+    for (int i = 0; i < this->numTriangles; i++)
     {
         Triangle3D *t = &this->triangles[i];
         Point3D movedPoints[3];
