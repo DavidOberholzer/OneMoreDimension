@@ -1,8 +1,17 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 #include "graphics.h"
+#include "data_io.h"
+#include "structures.h"
 
 using namespace std;
+
+struct gradients gradients;
+
+float clampF(float max, float min, float value)
+{
+    return value < max ? (value > min ? value : min) : max;
+}
 
 void graphicsStartup()
 {
@@ -43,10 +52,18 @@ void graphicsDrawPoint(int x, int y, int cIndex)
     SDL_RenderDrawPoint(renderer, x, y);
 }
 
-void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, int cIndex, float zBuffer[WIDTH * HEIGHT])
+void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, float u0, float v0, float ooz0, float dooz, float duoz, float dvoz, int tex, int cIndex, float zBuffer[WIDTH * HEIGHT])
 {
     struct Color color = colors[cIndex];
-    SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+    struct texture *texture;
+    if (tex > 0)
+    {
+        texture = &textures[tex - 1];
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+    }
     int startX, endX;
     float startZ, endZ;
     if (x1 < x2)
@@ -66,12 +83,25 @@ void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, int cIn
 
     for (int x = startX; x <= endX; x++)
     {
-        float t = (x - startX) / (float)(endX - startX);
+        int dx = x - startX;
+        float t = dx / (float)(endX - startX);
         float z = endZ * t + startZ * (1 - t);
         int index = y * WIDTH + x;
         if (zBuffer[index] > z)
         {
             zBuffer[index] = z;
+            if (tex > 0)
+            {
+                float ooz = gradients.dOneOverZdX * dx + dooz + ooz0;
+                float u = clampF(1.0, 0.0, ((gradients.dUOverZdX * dx + duoz) / ooz) + u0);
+                float v = clampF(1.0, 0.0, ((gradients.dVOverZdX * dx + dvoz) / ooz) + v0);
+
+                int wPix = (texture->width - 1) * u;
+                int hPix = (texture->height - 1) * v;
+                
+                int index = hPix * texture->width + wPix;
+                SDL_SetRenderDrawColor(renderer, texture->pixels[index].R, texture->pixels[index].G, texture->pixels[index].B, 0x00);
+            }
             SDL_RenderDrawPoint(renderer, x, y);
         }
     }

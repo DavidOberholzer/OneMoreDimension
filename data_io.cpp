@@ -91,7 +91,7 @@ void LoadObject(char *filename)
 	}
 	o->mallocVertices(vertices);
 	o->mallocTriangles(triangles);
-	cout << "Loaded object " << dir << endl;
+	cout << "Loaded object " << filename << endl;
 }
 
 void LoadPCXFile(char *filename, struct texture *texture)
@@ -169,7 +169,7 @@ void LoadTexture(char *filename)
 	textures = (struct texture *)realloc(textures, ++numTextures * sizeof(*textures));
 	struct texture *texture = &textures[numTextures - 1];
 	LoadPCXFile(dir, texture);
-	printf("Successfully Loaded texture %s...\n", filename);
+	printf("Loaded texture %s...\n", filename);
 }
 
 void UnloadData()

@@ -60,9 +60,9 @@ public:
 class Triangle3D
 {
   int points[3], texture;
-  float uTexels[3], vTexels[3];
 
 public:
+  float uTexels[3], vTexels[3];
   Triangle3D();
   ~Triangle3D();
   int getPoint(int);
@@ -119,7 +119,7 @@ public:
 };
 
 int dotProduct(int, int, int, int, int, int);
-void drawTriangle(int, Matrix *, Matrix *, Point3D[], float[WIDTH * HEIGHT]);
+void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
 
 #endif

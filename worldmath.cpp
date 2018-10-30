@@ -5,8 +5,6 @@
 
 using namespace std;
 
-struct gradients currentGradients;
-
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
@@ -37,50 +35,74 @@ void updateGradients(Point3D points[3], float u[3], float v[3])
     // 1/z gradients
     c02 = ooz0 - ooz2;
     c12 = ooz1 - ooz2;
-    currentGradients.dOneOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    currentGradients.dOneOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+    gradients.dOneOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    gradients.dOneOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
 
     // u/z gradients
     c02 = uoz0 - uoz2;
     c12 = uoz1 - uoz2;
-    currentGradients.dUOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    currentGradients.dUOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+    gradients.dUOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    gradients.dUOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
 
     // v/z gradients
     c02 = voz0 - voz2;
     c12 = voz1 - voz2;
-    currentGradients.dVOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    currentGradients.dVOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+    gradients.dVOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
+    gradients.dVOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
 }
 
-void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
+void fillTriangle(Point3D points[3], float u0, float v0, float ooz0, int tex, int cIndex, float zBuffer[WIDTH * HEIGHT])
 {
     int startX, endX;
     float startZ, endZ;
     float dyt = (points[2].getY() - points[0].getY());
     for (int y = (int)points[0].getY(); y < (int)points[1].getY(); y++)
     {
-        float t = (y - (int)points[0].getY()) / dyt;
-        float t2 = (y - (int)points[0].getY()) / (points[1].getY() - points[0].getY());
+        float dy = y - (int)points[0].getY();
+        // Linear Interpolation of X, Y coordinates down line 0 - 2.
+        float t = dy / dyt;
+        float t2 = dy / (points[1].getY() - points[0].getY());
         int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
         int x2 = points[1].getX() * t2 + points[0].getX() * (1 - t2);
         float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
         float z2 = points[1].getZ() * t2 + points[0].getZ() * (1 - t2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+
+        // Gradient Calculations
+        int dx1 = x1 - points[0].getX();
+        int dx2 = x2 - points[0].getX();
+        float dy0 = gradients.dOneOverZdY * dy;
+        float dooz = dy0 + gradients.dOneOverZdX * (x1 < x2 ? dx1 : dx2);
+        dy0 = gradients.dUOverZdY * dy;
+        float duoz = dy0 + gradients.dUOverZdX * (x1 < x2 ? dx1 : dx2);
+        dy0 = gradients.dVOverZdY * dy;
+        float dvoz = dy0 + gradients.dVOverZdX * (x1 < x2 ? dx1 : dx2);
+        graphicsDrawStraightLine(x1, x2, z1, z2, y, u0, v0, ooz0, dooz, duoz, dvoz, tex, cIndex, zBuffer);
     }
     for (int y = (int)points[1].getY(); y < (int)points[2].getY(); y++)
     {
-        float t = (y - (int)points[0].getY()) / (points[2].getY() - points[0].getY());
-        float t2 = (y - (int)points[1].getY()) / (points[2].getY() - points[1].getY());
+        float dy = y - (int)points[0].getY();
+        // Linear Interpolation of X, Y coordinates down line 0 - 2.
+        float t = dy / (points[2].getY() - points[0].getY());
+        float t2 = dy / (points[2].getY() - points[1].getY());
         int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
         int x2 = points[2].getX() * t2 + points[1].getX() * (1 - t2);
         float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
         float z2 = points[2].getZ() * t2 + points[1].getZ() * (1 - t2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+
+        // Gradient Calculations
+        int dx1 = x1 - points[0].getX();
+        int dx2 = x2 - points[0].getX();
+        float dy0 = gradients.dOneOverZdY * dy;
+        float dooz = dy0 + gradients.dOneOverZdX * (x1 < x2 ? dx1 : dx2);
+        dy0 = gradients.dUOverZdY * dy;
+        float duoz = dy0 + gradients.dUOverZdX * (x1 < x2 ? dx1 : dx2);
+        dy0 = gradients.dVOverZdY * dy;
+        float dvoz = dy0 + gradients.dVOverZdX * (x1 < x2 ? dx1 : dx2);
+        graphicsDrawStraightLine(x1, x2, z1, z2, y, u0, v0, ooz0, dooz, duoz, dvoz, tex, cIndex, zBuffer);
     }
 }
 
-void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBuffer[WIDTH * HEIGHT])
+void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
     Matrix projectedPoints[3];
     Point3D nPoints[3];
@@ -114,10 +136,15 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBu
             for (int j = i; j < 3; j++)
             {
                 if (nPoints[j].getY() < nPoints[i].getY())
+                {
                     swap(nPoints[j], nPoints[i]);
+                    swap(u[j], u[i]);
+                    swap(v[j], v[i]);
+                }
             }
         }
-        fillTriangle(nPoints, cIndex, zBuffer);
+        updateGradients(nPoints, u, v);
+        fillTriangle(nPoints, u[0], v[0], 1 / nPoints[0].getZ(), tex, cIndex, zBuffer);
     }
 }
 
@@ -612,7 +639,7 @@ void Object::mallocTriangles(Triangle3D *triangles)
 
 void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
 {
-    for (int i = 0; i < this->numTriangles; i++)
+    for (int i = 0; i < 1; i++)
     {
         Triangle3D *t = &this->triangles[i];
         Point3D movedPoints[3];
@@ -623,7 +650,7 @@ void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy
             p.translate(dx, dy, dz);
             movedPoints[j] = p;
         }
-        drawTriangle(floor(i / 2.0), P, V, movedPoints, zBuffer);
+        drawTriangle(floor(i / 2.0), P, V, movedPoints, this->triangles[i].uTexels, this->triangles[i].vTexels, this->triangles[i].getTexture(), zBuffer);
     }
 }
 
