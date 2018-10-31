@@ -10,100 +10,75 @@ int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
     return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-void updateGradients(Point3D points[3], float u[3], float v[3])
+float triangleOrientation(Point3D points[3])
 {
-    float ooz0, ooz1, ooz2;
-    float uoz0, uoz1, uoz2;
-    float voz0, voz1, voz2;
-    float c02, c12;
-
-    ooz0 = 1 / points[0].getZ();
-    ooz1 = 1 / points[1].getZ();
-    ooz2 = 1 / points[2].getZ();
-    uoz0 = u[0] * ooz0;
-    uoz1 = u[1] * ooz1;
-    uoz2 = u[2] * ooz2;
-    voz0 = v[0] * ooz0;
-    voz1 = v[1] * ooz1;
-    voz2 = v[2] * ooz2;
-
-    float y02 = points[0].getY() - points[2].getY();
-    float y12 = points[1].getY() - points[2].getY();
-    float x02 = points[0].getX() - points[2].getX();
-    float x12 = points[1].getX() - points[2].getX();
-
-    // 1/z gradients
-    c02 = ooz0 - ooz2;
-    c12 = ooz1 - ooz2;
-    gradients.dOneOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    gradients.dOneOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
-
-    // u/z gradients
-    c02 = uoz0 - uoz2;
-    c12 = uoz1 - uoz2;
-    gradients.dUOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    gradients.dUOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
-
-    // v/z gradients
-    c02 = voz0 - voz2;
-    c12 = voz1 - voz2;
-    gradients.dVOverZdX = (c12 * y02 - c02 * y12) / (x12 * y02 - x02 * y12);
-    gradients.dVOverZdY = (c12 * x02 - c02 * x12) / (x02 * y12 - x12 * y02);
+    float x1 = points[2].getX() - points[0].getX();
+    float y1 = points[2].getY() - points[0].getY();
+    float x2 = points[1].getX() - points[0].getX();
+    float y2 = points[1].getY() - points[0].getY();
+    return ((x1 * y2 - x2 * y1) >= 0);
 }
 
-void fillTriangle(Point3D points[3], float u0, float v0, float ooz0, int tex, int cIndex, float zBuffer[WIDTH * HEIGHT])
+void drawScanLine(Edge left, Edge right, int y, float zBuffer[WIDTH * HEIGHT])
 {
-    int startX, endX;
-    float startZ, endZ;
-    float dyt = (points[2].getY() - points[0].getY());
-    for (int y = (int)points[0].getY(); y < (int)points[1].getY(); y++)
-    {
-        float dy = y - (int)points[0].getY();
-        // Linear Interpolation of X, Y coordinates down line 0 - 2.
-        float t = dy / dyt;
-        float t2 = dy / (points[1].getY() - points[0].getY());
-        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
-        int x2 = points[1].getX() * t2 + points[0].getX() * (1 - t2);
-        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
-        float z2 = points[1].getZ() * t2 + points[0].getZ() * (1 - t2);
+    int xMin = (int)ceil(left.x);
+    int xMax = (int)ceil(right.x);
+    Color minColor = left.m_color;
+    Color maxColor = right.m_color;
+    float oozMin = left.m_ooz;
+    float oozMax = right.m_ooz;
 
-        // Gradient Calculations
-        int dx1 = x1 - points[0].getX();
-        int dx2 = x2 - points[0].getX();
-        float dy0 = gradients.dOneOverZdY * dy;
-        float dooz = dy0 + gradients.dOneOverZdX * (x1 < x2 ? dx1 : dx2);
-        dy0 = gradients.dUOverZdY * dy;
-        float duoz = dy0 + gradients.dUOverZdX * (x1 < x2 ? dx1 : dx2);
-        dy0 = gradients.dVOverZdY * dy;
-        float dvoz = dy0 + gradients.dVOverZdX * (x1 < x2 ? dx1 : dx2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, u0, v0, ooz0, dooz, duoz, dvoz, tex, cIndex, zBuffer);
-    }
-    for (int y = (int)points[1].getY(); y < (int)points[2].getY(); y++)
+    for (int x = xMin; x <= xMax; x++)
     {
-        float dy = y - (int)points[0].getY();
-        // Linear Interpolation of X, Y coordinates down line 0 - 2.
-        float t = dy / (points[2].getY() - points[0].getY());
-        float t2 = (y - (int)points[1].getY()) / (points[2].getY() - points[1].getY());
-        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
-        int x2 = points[2].getX() * t2 + points[1].getX() * (1 - t2);
-        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
-        float z2 = points[2].getZ() * t2 + points[1].getZ() * (1 - t2);
-
-        // Gradient Calculations
-        int dx1 = x1 - points[0].getX();
-        int dx2 = x2 - points[0].getX();
-        float dy0 = gradients.dOneOverZdY * dy;
-        float dooz = dy0 + gradients.dOneOverZdX * (x1 < x2 ? dx1 : dx2);
-        dy0 = gradients.dUOverZdY * dy;
-        float duoz = dy0 + gradients.dUOverZdX * (x1 < x2 ? dx1 : dx2);
-        dy0 = gradients.dVOverZdY * dy;
-        float dvoz = dy0 + gradients.dVOverZdX * (x1 < x2 ? dx1 : dx2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, u0, v0, ooz0, dooz, duoz, dvoz, tex, cIndex, zBuffer);
+        float t = (x - xMin) / (float)(xMax - xMin);
+        Color current = minColor * (1 - t) + maxColor * t;
+        float ooz = oozMin * (1 - t) + oozMax * t;
+        float z = ooz;
+        int index = y * WIDTH + x;
+        if (zBuffer[index] > z)
+        {
+            zBuffer[index] = z;
+            graphicsDrawPoint(x, y, current.R, current.G, current.B);
+        }
     }
+}
+
+void scanEdge(Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT])
+{
+    Edge *left = A;
+    Edge *right = B;
+    if (orientation)
+    {
+        swap(left, right);
+    }
+
+    for (int y = B->yStart; y < B->yEnd; y++)
+    {
+        drawScanLine(*left, *right, y, zBuffer);
+        left->step();
+        right->step();
+    }
+}
+
+void fillTriangle(Point3D points[3], int c[3], float zBuffer[WIDTH * HEIGHT])
+{
+    Gradients gradients = Gradients(points, c);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], 0);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], 0);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], 1);
+
+    bool orientation = triangleOrientation(points);
+
+    scanEdge(topToBottom, topToMiddle, orientation, zBuffer);
+    scanEdge(topToBottom, middleToBottom, orientation, zBuffer);
+    delete topToBottom;
+    delete topToMiddle;
+    delete middleToBottom;
 }
 
 void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
+    int c[3] = {1, 2, 0};
     Matrix projectedPoints[3];
     Point3D nPoints[3];
     float uTemp[3] = {u[0], u[1], u[2]};
@@ -142,11 +117,12 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
                     swap(nPoints[j], nPoints[i]);
                     swap(uTemp[j], uTemp[i]);
                     swap(vTemp[j], vTemp[i]);
+                    swap(c[j], c[i]);
                 }
             }
         }
-        updateGradients(nPoints, u, v);
-        fillTriangle(nPoints, u[0], v[0], 1 / nPoints[0].getZ(), tex, cIndex, zBuffer);
+        fillTriangle(nPoints, c, zBuffer);
+        // fillTriangle(nPoints, uTemp[0], vTemp[0], 1 / nPoints[0].getZ(), tex, cIndex, zBuffer);
     }
 }
 
@@ -179,6 +155,34 @@ Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
     values[15] = 1;
     Matrix translation = Matrix(values, 4);
     return rotation * translation;
+}
+
+Color::Color()
+{
+}
+
+Color::Color(float R, float G, float B, float A)
+{
+    this->R = R;
+    this->G = G;
+    this->B = B;
+    this->A = A;
+}
+
+Color Color::operator+(Color other)
+{
+    return Color(R + other.R, G + other.G, B + other.B, A + other.A);
+}
+
+Color Color::operator-(Color other)
+{
+
+    return Color(R - other.R, G - other.G, B - other.B, A - other.A);
+}
+
+Color Color::operator*(float value)
+{
+    return Color(R * value, G * value, B * value, A * value);
 }
 
 Point3D::Point3D()
@@ -286,6 +290,59 @@ void Point3D::print()
 {
     printf("Point\n");
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
+}
+
+Gradients::Gradients(Point3D points[3], int c[3])
+{
+    float y02 = points[0].getY() - points[2].getY();
+    float y12 = points[1].getY() - points[2].getY();
+    float x02 = points[0].getX() - points[2].getX();
+    float x12 = points[1].getX() - points[2].getX();
+
+    float oodx = 1 / (x12 * y02 - x02 * y12);
+    float oody = -oodx;
+
+    for (int i = 0; i < 3; i++)
+        m_color[i] = colors[c[i]];
+
+    //1/z gradient
+    float ooz02 = (points[0].getZ()) - (points[2].getZ());
+    float ooz12 = (points[1].getZ()) - (points[2].getZ());
+    m_oozXStep = (ooz12 * y02 - ooz02 * y12) * oodx;
+    m_oozYStep = (ooz12 * x02 - ooz02 * x12) * oody;
+
+    // Color gradients
+    Color c02 = m_color[0] - m_color[2];
+    Color c12 = m_color[1] - m_color[2];
+    m_colorXStep = (c12 * y02 - c02 * y12) * oodx;
+    m_colorYStep = (c12 * x02 - c02 * x12) * oody;
+}
+
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, int minYIndex)
+{
+    yStart = (int)ceil(minYPoint.getY());
+    yEnd = (int)ceil(maxYPoint.getY());
+
+    float dy = maxYPoint.getY() - minYPoint.getY();
+    float dx = maxYPoint.getX() - minYPoint.getX();
+
+    float yPrestep = yStart - minYPoint.getY();
+    xStep = dx / dy;
+    x = minYPoint.getX() + yPrestep * xStep;
+    float xPrestep = x - minYPoint.getX();
+
+    m_ooz = (minYPoint.getZ()) + gradients.m_oozYStep * yPrestep + gradients.m_oozXStep * xPrestep;
+    m_oozStep = gradients.m_oozYStep + (gradients.m_oozXStep * xStep);
+
+    m_color = gradients.m_color[minYIndex] + gradients.m_colorYStep * yPrestep + gradients.m_colorXStep * xPrestep;
+    m_colorStep = gradients.m_colorYStep + (gradients.m_colorXStep * xStep);
+}
+
+void Edge::step()
+{
+    x += xStep;
+    m_ooz += m_oozStep;
+    m_color = m_color + m_colorStep;
 }
 
 Triangle3D::Triangle3D()

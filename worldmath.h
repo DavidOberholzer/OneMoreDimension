@@ -4,6 +4,25 @@
 #include "graphics.h"
 #include "structures.h"
 
+class Color
+{
+  public:
+	float R, G, B, A;
+	Color();
+	Color(float, float, float, float);
+	Color operator+(Color);
+	Color operator-(Color);
+	Color operator*(float);
+};
+
+static Color colors[6] = {
+	Color(0x00, 0x00, 0xff, 0xff),
+	Color(0x00, 0xff, 0x00, 0xff),
+	Color(0xff, 0x00, 0x00, 0xff),
+	Color(0xff, 0xff, 0x00, 0xff),
+	Color(0xff, 0x00, 0xff, 0xff),
+	Color(0xff, 0xff, 0xff, 0xff)};
+
 class Point3D
 {
   int ID;
@@ -31,6 +50,30 @@ public:
   float getY() { return y; };
   float getZ() { return z; };
   void print();
+};
+
+class Gradients
+{
+public:
+  float m_oozXStep, m_oozYStep;
+  Color m_color[3];
+  Color m_colorXStep;
+  Color m_colorYStep;
+  Gradients(Point3D[3], int[3]);
+};
+
+class Edge
+{
+public:
+  float x, xStep;
+  int yStart, yEnd;
+  float m_ooz;
+  float m_oozStep;
+  Color m_color;
+  Color m_colorStep;
+  Edge();
+  Edge(Gradients, Point3D, Point3D, int);
+  void step();
 };
 
 class Matrix

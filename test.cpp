@@ -101,4 +101,18 @@ int main()
 
 	Quarternion q5 = Quarternion(M_PI / 4, M_PI / 2, M_PI / 2);
 	q5.print();
+
+	Point3D triangle[3] = {
+		Point3D(400, 250, 0),
+		Point3D(300, 350, 0),
+		Point3D(340, 425, 0)
+	};
+	int c[3] = {0, 1, 2};
+	Gradients gradients = Gradients(triangle, c);
+	Edge one = Edge(gradients, triangle[0], triangle[2], 0);
+	cout << "c[0].R: " << colors[c[0]].R << endl;
+	cout << "c[2].R: " << colors[c[2]].R << endl;
+	cout << "xStep: " << one.xStep << endl;
+	cout << "m_color.R" << one.m_color.R << endl;
+	cout << "m_colorStep.R: " << one.m_colorStep.R << endl;
 }

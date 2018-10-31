@@ -6,7 +6,7 @@
 
 using namespace std;
 
-struct gradients gradients;
+// struct gradients gradients;
 
 float clampF(float max, float min, float value)
 {
@@ -45,25 +45,24 @@ void graphicsFrameDraw()
     SDL_RenderPresent(renderer);
 }
 
-void graphicsDrawPoint(int x, int y, int cIndex)
+void graphicsDrawPoint(int x, int y, int R, int G, int B)
 {
-    struct Color color = colors[cIndex];
-    SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+    SDL_SetRenderDrawColor(renderer, R, G, B, 0x00);
     SDL_RenderDrawPoint(renderer, x, y);
 }
 
 void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, float u0, float v0, float ooz0, float dooz, float duoz, float dvoz, int tex, int cIndex, float zBuffer[WIDTH * HEIGHT])
 {
-    struct Color color = colors[cIndex];
+    Color color = colors[cIndex];
     struct texture *texture;
-    if (tex > 0)
-    {
-        texture = &textures[tex - 1];
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
-    }
+    // if (tex > 0)
+    // {
+    //     texture = &textures[tex - 1];
+    // }
+    // else
+    // {
+    SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
+    // }
     int startX, endX;
     float startZ, endZ;
     if (x1 < x2)
@@ -90,18 +89,18 @@ void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, float u
         if (zBuffer[index] > z)
         {
             zBuffer[index] = z;
-            if (tex > 0)
-            {
-                float ooz = gradients.dOneOverZdX * dx + dooz + ooz0;
-                float u = clampF(1.0, 0.0, ((gradients.dUOverZdX * dx + duoz) / ooz) + u0);
-                float v = clampF(1.0, 0.0, ((gradients.dVOverZdX * dx + dvoz) / ooz) + v0);
+            // if (tex > 0)
+            // {
+            //     float ooz = gradients.dOneOverZdX * dx + dooz + ooz0;
+            //     float u = clampF(1.0, 0.0, ((gradients.dUOverZdX * dx + duoz) / ooz) + u0);
+            //     float v = clampF(1.0, 0.0, ((gradients.dVOverZdX * dx + dvoz) / ooz) + v0);
 
-                int wPix = (texture->width - 1) * u;
-                int hPix = (texture->height - 1) * v;
-                
-                int index = hPix * texture->width + wPix;
-                SDL_SetRenderDrawColor(renderer, texture->pixels[index].R, texture->pixels[index].G, texture->pixels[index].B, 0x00);
-            }
+            //     int wPix = (texture->width - 1) * u;
+            //     int hPix = (texture->height - 1) * v;
+
+            //     int index = hPix * texture->width + wPix;
+            //     SDL_SetRenderDrawColor(renderer, texture->pixels[index].R, texture->pixels[index].G, texture->pixels[index].B, 0x00);
+            // }
             SDL_RenderDrawPoint(renderer, x, y);
         }
     }
@@ -109,7 +108,7 @@ void graphicsDrawStraightLine(int x1, int x2, float z1, float z2, int y, float u
 
 void graphicsDrawLine(int x1, int y1, int x2, int y2, int cIndex)
 {
-    struct Color color = colors[cIndex];
+    Color color = colors[cIndex];
     SDL_SetRenderDrawColor(renderer, color.R, color.G, color.B, color.A);
     bool steep = false;
     if (abs(x1 - x2) < abs(y1 - y2))
