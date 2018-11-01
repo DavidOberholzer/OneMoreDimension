@@ -8,7 +8,7 @@
 using namespace std;
 
 struct texture *textures = NULL;
-int numTextures;
+int numTextures = 0;
 
 Object *objects;
 int numObjects;

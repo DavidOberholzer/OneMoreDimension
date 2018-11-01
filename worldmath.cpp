@@ -31,6 +31,7 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
     float xPrestep = xMin - left.x;
     float u = left.u + gradients.uXStep * xPrestep;
     float v = left.v + gradients.vXStep * xPrestep;
+    float ooz = left.ooz + gradients.oozXStep * xPrestep;
     float zMin = left.z;
     float zMax = right.z;
 
@@ -45,14 +46,16 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
             zBuffer[index] = z;
             if (tex >= 0)
             {
-                int xPix = u * (texture->width - 1);
-                int yPix = v * (texture->height - 1);
+                float wz = 1 / ooz;
+                int xPix = (u * wz) * (texture->width - 1);
+                int yPix = (v * wz) * (texture->height - 1);
                 int tindex = (yPix * texture->width) + xPix;
                 graphicsDrawPoint(x, y, texture->pixels[tindex].R, texture->pixels[tindex].G, texture->pixels[tindex].B);
             }
         }
         u += gradients.uXStep;
         v += gradients.vXStep;
+        ooz += gradients.oozXStep;
     }
 }
 
@@ -72,12 +75,12 @@ void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBu
     }
 }
 
-void fillTriangle(Point3D points[3], float u[3], float v[3], float zBuffer[WIDTH * HEIGHT], int tex)
+void fillTriangle(Point3D points[3], float u[3], float v[3], float z[3], float zBuffer[WIDTH * HEIGHT], int tex)
 {
-    Gradients gradients = Gradients(points, u, v);
-    Edge *topToBottom = new Edge(gradients, points[0], points[2], u[0], v[0]);
-    Edge *topToMiddle = new Edge(gradients, points[0], points[1], u[0], v[0]);
-    Edge *middleToBottom = new Edge(gradients, points[1], points[2], u[1], v[1]);
+    Gradients gradients = Gradients(points, u, v, z);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], u[0], v[0], z[0]);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], u[0], v[0], z[0]);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], u[1], v[1], z[1]);
 
     bool orientation = triangleOrientation(points);
 
@@ -90,6 +93,7 @@ void fillTriangle(Point3D points[3], float u[3], float v[3], float zBuffer[WIDTH
 
 void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
+    float wz[3];
     Matrix projectedPoints[3];
     Point3D nPoints[3];
     float uTemp[3] = {u[0], u[1], u[2]};
@@ -115,6 +119,7 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
             nPoints[i].setX((x + 1) * WIDTHD2);
             nPoints[i].setY((y + 1) * HEIGHTD2);
             nPoints[i].setZ(z);
+            wz[i] = projectedPoints[i].getValue(12);
         }
     }
     if (draw)
@@ -128,10 +133,11 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
                     swap(nPoints[j], nPoints[i]);
                     swap(uTemp[j], uTemp[i]);
                     swap(vTemp[j], vTemp[i]);
+                    swap(wz[j], wz[i]);
                 }
             }
         }
-        fillTriangle(nPoints, uTemp, vTemp, zBuffer, tex);
+        fillTriangle(nPoints, uTemp, vTemp, wz, zBuffer, tex);
     }
 }
 
@@ -301,7 +307,7 @@ void Point3D::print()
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
-Gradients::Gradients(Point3D points[3], float u[3], float v[3])
+Gradients::Gradients(Point3D points[3], float u[3], float v[3], float z[3])
 {
     float y02 = points[0].getY() - points[2].getY();
     float y12 = points[1].getY() - points[2].getY();
@@ -311,25 +317,36 @@ Gradients::Gradients(Point3D points[3], float u[3], float v[3])
     float oodx = 1 / (x12 * y02 - x02 * y12);
     float oody = -oodx;
 
-    //1/z gradient
+    // z gradient
     float c02 = (points[0].getZ()) - (points[2].getZ());
     float c12 = (points[1].getZ()) - (points[2].getZ());
     zXStep = (c12 * y02 - c02 * y12) * oodx;
     zYStep = (c12 * x02 - c02 * x12) * oody;
 
-    // u gradients
-    c02 = u[0] - u[2];
-    c12 = u[1] - u[2];
+    // 1/z gradients
+    float ooz0 = 1 / z[0];
+    float ooz1 = 1 / z[1];
+    float ooz2 = 1 / z[2];
+
+    c02 = ooz0 - ooz2;
+    c12 = ooz1 - ooz2;
+    oozXStep = (c12 * y02 - c02 * y12) * oodx;
+    oozYStep = (c12 * x02 - c02 * x12) * oody;
+
+    // u/z gradients
+    c02 = (u[0] * ooz0) - (u[2] * ooz2);
+    c12 = (u[1] * ooz1) - (u[2] * ooz2);
     uXStep = (c12 * y02 - c02 * y12) * oodx;
     uYStep = (c12 * x02 - c02 * x12) * oody;
 
-    c02 = v[0] - v[2];
-    c12 = v[1] - v[2];
+    // v/z gradients
+    c02 = (v[0] * ooz0) - (v[2] * ooz2);
+    c12 = (v[1] * ooz1) - (v[2] * ooz2);
     vXStep = (c12 * y02 - c02 * y12) * oodx;
     vYStep = (c12 * x02 - c02 * x12) * oody;
 }
 
-Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minYU, float minYV)
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minYU, float minYV, float minYZ)
 {
     yStart = (int)ceil(minYPoint.getY());
     yEnd = (int)ceil(maxYPoint.getY());
@@ -345,10 +362,13 @@ Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minY
     z = (minYPoint.getZ()) + gradients.zYStep * yPrestep + gradients.zXStep * xPrestep;
     zStep = gradients.zYStep + (gradients.zXStep * xStep);
 
-    u = minYU + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
+    ooz = (1 / minYZ) + gradients.oozYStep * yPrestep + gradients.oozXStep * xPrestep;
+    oozStep = gradients.oozYStep + (gradients.oozXStep * xStep);
+
+    u = (minYU / minYZ) + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
     uStep = gradients.uYStep + (gradients.uXStep * xStep);
 
-    v = minYV + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
+    v = (minYV / minYZ) + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
     vStep = gradients.vYStep + (gradients.vXStep * xStep);
 }
 
@@ -356,6 +376,7 @@ void Edge::step()
 {
     x += xStep;
     z += zStep;
+    ooz += oozStep;
     u += uStep;
     v += vStep;
 }

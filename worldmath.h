@@ -55,10 +55,11 @@ public:
 class Gradients
 {
 public:
+  float oozXStep, oozYStep;
   float zXStep, zYStep;
   float uXStep, uYStep;
   float vXStep, vYStep;
-  Gradients(Point3D[3], float[3], float[3]);
+  Gradients(Point3D[3], float[3], float[3], float[3]);
 };
 
 class Edge
@@ -68,10 +69,12 @@ public:
   int yStart, yEnd;
   float z;
   float zStep;
+  float ooz;
+  float oozStep;
   float u, v;
   float uStep, vStep;
   Edge();
-  Edge(Gradients, Point3D, Point3D, float, float);
+  Edge(Gradients, Point3D, Point3D, float, float, float);
   void step();
 };
 
