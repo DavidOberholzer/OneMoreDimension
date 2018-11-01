@@ -10,7 +10,7 @@ int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
     return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-float triangleOrientation(Point3D points[3])
+bool triangleOrientation(Point3D points[3])
 {
     float x1 = points[2].getX() - points[0].getX();
     float y1 = points[2].getY() - points[0].getY();
@@ -19,31 +19,47 @@ float triangleOrientation(Point3D points[3])
     return ((x1 * y2 - x2 * y1) >= 0);
 }
 
-void drawScanLine(Edge left, Edge right, int y, float zBuffer[WIDTH * HEIGHT])
+void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuffer[WIDTH * HEIGHT], int tex)
 {
+    struct texture *texture;
+    if (tex >= 0)
+    {
+        texture = &textures[tex - 1];
+    }
     int xMin = (int)ceil(left.x);
     int xMax = (int)ceil(right.x);
-    Color minColor = left.m_color;
-    Color maxColor = right.m_color;
-    float oozMin = left.m_ooz;
-    float oozMax = right.m_ooz;
+    float xPrestep = xMin - left.x;
+    float u = left.u + gradients.uXStep * xPrestep;
+    float v = left.v + gradients.vXStep * xPrestep;
+    // cout << "left u: " << left.u << " left v: " << left.v << endl;
+    float zMin = left.z;
+    float zMax = right.z;
 
-    for (int x = xMin; x <= xMax; x++)
+    for (int x = xMin; x < xMax; x++)
     {
         float t = (x - xMin) / (float)(xMax - xMin);
-        Color current = minColor * (1 - t) + maxColor * t;
-        float ooz = oozMin * (1 - t) + oozMax * t;
-        float z = ooz;
+
+        float z = zMin * (1 - t) + zMax * t;
         int index = y * WIDTH + x;
         if (zBuffer[index] > z)
         {
             zBuffer[index] = z;
-            graphicsDrawPoint(x, y, current.R, current.G, current.B);
+            if (tex >= 0)
+            {
+                int xPix = u * (texture->width - 1);
+                int yPix = v * (texture->height - 1);
+                int tindex = (yPix * texture->width) + xPix;
+                graphicsDrawPoint(x, y, texture->pixels[tindex].R, texture->pixels[tindex].G, texture->pixels[tindex].B);
+            }
+            // cout << "u: " << u << " v: " << v << endl;
+            u += gradients.uXStep;
+            v += gradients.vXStep;
         }
     }
+    // cout << "right u: " << right.u << " right v: " << right.v << endl;
 }
 
-void scanEdge(Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT])
+void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT], int tex)
 {
     Edge *left = A;
     Edge *right = B;
@@ -51,26 +67,25 @@ void scanEdge(Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT])
     {
         swap(left, right);
     }
-
     for (int y = B->yStart; y < B->yEnd; y++)
     {
-        drawScanLine(*left, *right, y, zBuffer);
+        drawScanLine(gradients, *left, *right, y, zBuffer, tex);
         left->step();
         right->step();
     }
 }
 
-void fillTriangle(Point3D points[3], int c[3], float zBuffer[WIDTH * HEIGHT])
+void fillTriangle(Point3D points[3], float u[3], float v[3], float zBuffer[WIDTH * HEIGHT], int tex)
 {
-    Gradients gradients = Gradients(points, c);
-    Edge *topToBottom = new Edge(gradients, points[0], points[2], 0);
-    Edge *topToMiddle = new Edge(gradients, points[0], points[1], 0);
-    Edge *middleToBottom = new Edge(gradients, points[1], points[2], 1);
+    Gradients gradients = Gradients(points, u, v);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], u[0], v[0]);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], u[0], v[0]);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], u[1], v[1]);
 
     bool orientation = triangleOrientation(points);
 
-    scanEdge(topToBottom, topToMiddle, orientation, zBuffer);
-    scanEdge(topToBottom, middleToBottom, orientation, zBuffer);
+    scanEdge(gradients, topToBottom, topToMiddle, orientation, zBuffer, tex);
+    scanEdge(gradients, topToBottom, middleToBottom, orientation, zBuffer, tex);
     delete topToBottom;
     delete topToMiddle;
     delete middleToBottom;
@@ -78,7 +93,6 @@ void fillTriangle(Point3D points[3], int c[3], float zBuffer[WIDTH * HEIGHT])
 
 void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
-    int c[3] = {1, 2, 0};
     Matrix projectedPoints[3];
     Point3D nPoints[3];
     float uTemp[3] = {u[0], u[1], u[2]};
@@ -117,11 +131,10 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
                     swap(nPoints[j], nPoints[i]);
                     swap(uTemp[j], uTemp[i]);
                     swap(vTemp[j], vTemp[i]);
-                    swap(c[j], c[i]);
                 }
             }
         }
-        fillTriangle(nPoints, c, zBuffer);
+        fillTriangle(nPoints, uTemp, vTemp, zBuffer, tex);
         // fillTriangle(nPoints, uTemp[0], vTemp[0], 1 / nPoints[0].getZ(), tex, cIndex, zBuffer);
     }
 }
@@ -292,7 +305,7 @@ void Point3D::print()
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
-Gradients::Gradients(Point3D points[3], int c[3])
+Gradients::Gradients(Point3D points[3], float u[3], float v[3])
 {
     float y02 = points[0].getY() - points[2].getY();
     float y12 = points[1].getY() - points[2].getY();
@@ -302,23 +315,25 @@ Gradients::Gradients(Point3D points[3], int c[3])
     float oodx = 1 / (x12 * y02 - x02 * y12);
     float oody = -oodx;
 
-    for (int i = 0; i < 3; i++)
-        m_color[i] = colors[c[i]];
-
     //1/z gradient
-    float ooz02 = (points[0].getZ()) - (points[2].getZ());
-    float ooz12 = (points[1].getZ()) - (points[2].getZ());
-    m_oozXStep = (ooz12 * y02 - ooz02 * y12) * oodx;
-    m_oozYStep = (ooz12 * x02 - ooz02 * x12) * oody;
+    float c02 = (points[0].getZ()) - (points[2].getZ());
+    float c12 = (points[1].getZ()) - (points[2].getZ());
+    zXStep = (c12 * y02 - c02 * y12) * oodx;
+    zYStep = (c12 * x02 - c02 * x12) * oody;
 
-    // Color gradients
-    Color c02 = m_color[0] - m_color[2];
-    Color c12 = m_color[1] - m_color[2];
-    m_colorXStep = (c12 * y02 - c02 * y12) * oodx;
-    m_colorYStep = (c12 * x02 - c02 * x12) * oody;
+    // u gradients
+    c02 = u[0] - u[2];
+    c12 = u[1] - u[2];
+    uXStep = (c12 * y02 - c02 * y12) * oodx;
+    uYStep = (c12 * x02 - c02 * x12) * oody;
+
+    c02 = v[0] - v[2];
+    c12 = v[1] - v[2];
+    vXStep = (c12 * y02 - c02 * y12) * oodx;
+    vYStep = (c12 * x02 - c02 * x12) * oody;
 }
 
-Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, int minYIndex)
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minYU, float minYV)
 {
     yStart = (int)ceil(minYPoint.getY());
     yEnd = (int)ceil(maxYPoint.getY());
@@ -331,18 +346,22 @@ Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, int minYIn
     x = minYPoint.getX() + yPrestep * xStep;
     float xPrestep = x - minYPoint.getX();
 
-    m_ooz = (minYPoint.getZ()) + gradients.m_oozYStep * yPrestep + gradients.m_oozXStep * xPrestep;
-    m_oozStep = gradients.m_oozYStep + (gradients.m_oozXStep * xStep);
+    z = (minYPoint.getZ()) + gradients.zYStep * yPrestep + gradients.zXStep * xPrestep;
+    zStep = gradients.zYStep + (gradients.zXStep * xStep);
 
-    m_color = gradients.m_color[minYIndex] + gradients.m_colorYStep * yPrestep + gradients.m_colorXStep * xPrestep;
-    m_colorStep = gradients.m_colorYStep + (gradients.m_colorXStep * xStep);
+    u = minYU + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
+    uStep = gradients.uYStep + (gradients.uXStep * xStep);
+
+    v = minYV + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
+    vStep = gradients.vYStep + (gradients.vXStep * xStep);
 }
 
 void Edge::step()
 {
     x += xStep;
-    m_ooz += m_oozStep;
-    m_color = m_color + m_colorStep;
+    z += zStep;
+    u += uStep;
+    v += vStep;
 }
 
 Triangle3D::Triangle3D()
@@ -542,49 +561,6 @@ Matrix::Matrix(Point3D *vertex)
     this->values[5] = vertex->getY();
     this->values[10] = vertex->getZ();
     this->values[15] = 1;
-}
-
-void Matrix::printMatrix()
-{
-    cout << "Matrix" << endl;
-    if (this->onebyX)
-    {
-        int length = this->two ? 2 : this->three ? 3 : 4;
-        for (int i = 0; i < length; i++)
-        {
-            printf("%.2f\n", this->values[i * 4]);
-            if (i + 1 < length)
-            {
-                printf("----\n");
-            }
-        }
-    }
-    if (this->two)
-    {
-        printf("%.2f | %.2f\n", this->values[0], this->values[1]);
-        printf("-----------\n");
-        printf("%.2f | %.2f\n", this->values[4], this->values[5]);
-    }
-    if (this->three)
-    {
-        printf("%.2f | %.2f | %.2f\n", this->values[0], this->values[1], this->values[2]);
-        printf("------------------\n");
-        printf("%.2f | %.2f | %.2f\n", this->values[4], this->values[5], this->values[6]);
-        printf("------------------\n");
-        printf("%.2f | %.2f | %.2f\n", this->values[8], this->values[9], this->values[10]);
-    }
-    if (this->four)
-    {
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[0], this->values[1], this->values[2], this->values[3]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[4], this->values[5], this->values[6], this->values[7]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[8], this->values[9], this->values[10], this->values[11]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[12], this->values[13], this->values[14], this->values[15]);
-    }
-    cout << "Matrix End" << endl
-         << endl;
 }
 
 int Matrix::getSize()

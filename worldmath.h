@@ -55,11 +55,10 @@ public:
 class Gradients
 {
 public:
-  float m_oozXStep, m_oozYStep;
-  Color m_color[3];
-  Color m_colorXStep;
-  Color m_colorYStep;
-  Gradients(Point3D[3], int[3]);
+  float zXStep, zYStep;
+  float uXStep, uYStep;
+  float vXStep, vYStep;
+  Gradients(Point3D[3], float[3], float[3]);
 };
 
 class Edge
@@ -67,12 +66,12 @@ class Edge
 public:
   float x, xStep;
   int yStart, yEnd;
-  float m_ooz;
-  float m_oozStep;
-  Color m_color;
-  Color m_colorStep;
+  float z;
+  float zStep;
+  float u, v;
+  float uStep, vStep;
   Edge();
-  Edge(Gradients, Point3D, Point3D, int);
+  Edge(Gradients, Point3D, Point3D, float, float);
   void step();
 };
 
@@ -162,6 +161,8 @@ public:
 };
 
 int dotProduct(int, int, int, int, int, int);
+bool triangleOrientation(Point3D[3]);
+void scanEdge(Gradients, Edge *, Edge *, bool, float[WIDTH * HEIGHT], int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
 

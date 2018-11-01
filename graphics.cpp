@@ -8,11 +8,6 @@ using namespace std;
 
 // struct gradients gradients;
 
-float clampF(float max, float min, float value)
-{
-    return value < max ? (value > min ? value : min) : max;
-}
-
 void graphicsStartup()
 {
     cout << "Starting SDL Window!" << endl;
