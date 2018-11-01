@@ -87,7 +87,7 @@ int main()
     LoadObject((char *)"grass_cube.txt");
     LoadObject((char *)"sand_cube.txt");
     LoadObject((char *)"water_cube.txt");
-    Matrix *P = new Matrix(1, 10, M_PI * 5.0 / 12.0, 3.0 / 4.0);
+    Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 10.0, 3.0 / 4.0);
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -107,6 +107,28 @@ int main()
         objects[0].drawObject(0, 0, angle, -1, 0, -3, P, &V, zBuffer);
         objects[1].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
         objects[2].drawObject(0, 0, 0, 0, 0, -5, P, &V, zBuffer);
+
+        objects[0].drawObject(0, 0, 0, -2, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -1, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 0, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 2, 4, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 2, 5, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 3, 6, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 2, 4, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 2, 5, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 3, 6, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -2, 3, 7, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -1, 3, 7, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 0, 3, 7, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -1, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 5, P, &V, zBuffer);
+        objects[2].drawObject(0, 0, 0, -1, 3, 5, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 5, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 4, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -1, 3, 4, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 4, P, &V, zBuffer);
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;
