@@ -102,8 +102,8 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-        objects[0].drawObject(0, 0, angle, 0, 0, -3, P, &V, zBuffer);
-        // objects[0].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, angle, -1, 0, -3, P, &V, zBuffer);
+        objects[0].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;

@@ -31,7 +31,6 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
     float xPrestep = xMin - left.x;
     float u = left.u + gradients.uXStep * xPrestep;
     float v = left.v + gradients.vXStep * xPrestep;
-    // cout << "left u: " << left.u << " left v: " << left.v << endl;
     float zMin = left.z;
     float zMax = right.z;
 
@@ -51,12 +50,10 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
                 int tindex = (yPix * texture->width) + xPix;
                 graphicsDrawPoint(x, y, texture->pixels[tindex].R, texture->pixels[tindex].G, texture->pixels[tindex].B);
             }
-            // cout << "u: " << u << " v: " << v << endl;
-            u += gradients.uXStep;
-            v += gradients.vXStep;
         }
+        u += gradients.uXStep;
+        v += gradients.vXStep;
     }
-    // cout << "right u: " << right.u << " right v: " << right.v << endl;
 }
 
 void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT], int tex)
@@ -135,7 +132,6 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
             }
         }
         fillTriangle(nPoints, uTemp, vTemp, zBuffer, tex);
-        // fillTriangle(nPoints, uTemp[0], vTemp[0], 1 / nPoints[0].getZ(), tex, cIndex, zBuffer);
     }
 }
 
