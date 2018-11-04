@@ -2,6 +2,26 @@
 #define WORLDMATH_H_INCLUDED
 #include "SDL2/SDL.h"
 #include "graphics.h"
+#include "structures.h"
+
+class Color
+{
+  public:
+	float R, G, B, A;
+	Color();
+	Color(float, float, float, float);
+	Color operator+(Color);
+	Color operator-(Color);
+	Color operator*(float);
+};
+
+static Color colors[6] = {
+	Color(0x00, 0x00, 0xff, 0xff),
+	Color(0x00, 0xff, 0x00, 0xff),
+	Color(0xff, 0x00, 0x00, 0xff),
+	Color(0xff, 0xff, 0x00, 0xff),
+	Color(0xff, 0x00, 0xff, 0xff),
+	Color(0xff, 0xff, 0xff, 0xff)};
 
 class Point3D
 {
@@ -32,6 +52,32 @@ public:
   void print();
 };
 
+class Gradients
+{
+public:
+  float oozXStep, oozYStep;
+  float zXStep, zYStep;
+  float uXStep, uYStep;
+  float vXStep, vYStep;
+  Gradients(Point3D[3], float[3], float[3], float[3]);
+};
+
+class Edge
+{
+public:
+  float x, xStep;
+  int yStart, yEnd;
+  float z;
+  float zStep;
+  float ooz;
+  float oozStep;
+  float u, v;
+  float uStep, vStep;
+  Edge();
+  Edge(Gradients, Point3D, Point3D, float, float, float);
+  void step();
+};
+
 class Matrix
 {
   float values[16];
@@ -58,19 +104,40 @@ public:
 
 class Triangle3D
 {
-  int points[3];
+  int points[3], texture;
 
 public:
+  float uTexels[3], vTexels[3];
   Triangle3D();
   ~Triangle3D();
   int getPoint(int);
   int getP1();
   int getP2();
   int getP3();
+  float getUTexel(int);
+  float getVTexel(int);
+  int getTexture();
   void setP1(int);
   void setP2(int);
   void setP3(int);
-  // bool pointInTriangle(int, int);
+  void setUTexel(int, float);
+  void setVTexel(int, float);
+  void setTexture(int);
+};
+
+class Object
+{
+public:
+  char *name;
+  Point3D *vertices;
+  Triangle3D *triangles;
+  int numVertices, numTriangles;
+  Object();
+  Object(char *);
+  ~Object();
+  void mallocVertices(Point3D *);
+  void mallocTriangles(Triangle3D *);
+  void drawObject(float, float, float, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
 };
 
 class Quarternion
@@ -97,8 +164,9 @@ public:
 };
 
 int dotProduct(int, int, int, int, int, int);
-void drawTriangle(int, Matrix *, Matrix *, Point3D[], float[WIDTH * HEIGHT]);
+bool triangleOrientation(Point3D[3]);
+void scanEdge(Gradients, Edge *, Edge *, bool, float[WIDTH * HEIGHT], int);
+void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
-// bool pointInside(int, int, Point3D *, Vector3D *, Vector3D *);
 
 #endif

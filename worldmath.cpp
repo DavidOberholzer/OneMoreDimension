@@ -1,66 +1,103 @@
 #include <iostream>
 #include "worldmath.h"
 #include "data_io.h"
+#include "structures.h"
 
 using namespace std;
-
-// bool pointInside(int x, int y, Point3D *A, Vector3D *j, Vector3D *k)
-// {
-//     Vector3D *i = new Vector3D(x, y, 0, A->getX(), A->getY(), 0);
-//     int ij = dotProduct(i->getVX(), i->getVY(), 0, j->getVX(), j->getVY(), 0);
-//     int ik = dotProduct(i->getVX(), i->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     int jj = dotProduct(j->getVX(), j->getVY(), 0, j->getVX(), j->getVY(), 0);
-//     int jk = dotProduct(j->getVX(), j->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     int kk = dotProduct(k->getVX(), k->getVY(), 0, k->getVX(), k->getVY(), 0);
-//     float denominator = (jk * jk) - (kk * jj);
-//     if (denominator == 0)
-//     {
-//         cout << "Denominator equals 0";
-//     }
-//     else
-//     {
-//         float u = -((ik * jk) - (ij * kk)) / denominator;
-//         float v = -((ij * jk) - (ik * jj)) / denominator;
-//         return u >= 0 && v >= 0 && (u + v) <= 1;
-//     }
-// }
 
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
 }
 
-void fillTriangle(Point3D points[3], int cIndex, float zBuffer[WIDTH * HEIGHT])
+bool triangleOrientation(Point3D points[3])
 {
-    int startX, endX;
-    float startZ, endZ;
-    float dyt = (points[2].getY() - points[0].getY());
-    for (int y = (int)points[0].getY(); y < (int)points[1].getY(); y++)
+    float x1 = points[2].getX() - points[0].getX();
+    float y1 = points[2].getY() - points[0].getY();
+    float x2 = points[1].getX() - points[0].getX();
+    float y2 = points[1].getY() - points[0].getY();
+    return ((x1 * y2 - x2 * y1) >= 0);
+}
+
+void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuffer[WIDTH * HEIGHT], int tex)
+{
+    struct texture *texture;
+    if (tex >= 0)
     {
-        float t = (y - (int)points[0].getY()) / dyt;
-        float t2 = (y - (int)points[0].getY()) / (points[1].getY() - points[0].getY());
-        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
-        int x2 = points[1].getX() * t2 + points[0].getX() * (1 - t2);
-        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
-        float z2 = points[1].getZ() * t2 + points[0].getZ() * (1 - t2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+        texture = &textures[tex - 1];
     }
-    for (int y = (int)points[1].getY(); y < (int)points[2].getY(); y++)
+    int xMin = (int)ceil(left.x);
+    int xMax = (int)ceil(right.x);
+    float xPrestep = xMin - left.x;
+    float u = left.u + gradients.uXStep * xPrestep;
+    float v = left.v + gradients.vXStep * xPrestep;
+    float ooz = left.ooz + gradients.oozXStep * xPrestep;
+    float zMin = left.z;
+    float zMax = right.z;
+
+    for (int x = xMin; x < xMax; x++)
     {
-        float t = (y - (int)points[0].getY()) / (points[2].getY() - points[0].getY());
-        float t2 = (y - (int)points[1].getY()) / (points[2].getY() - points[1].getY());
-        int x1 = points[2].getX() * t + points[0].getX() * (1 - t);
-        int x2 = points[2].getX() * t2 + points[1].getX() * (1 - t2);
-        float z1 = points[2].getZ() * t + points[0].getZ() * (1 - t);
-        float z2 = points[2].getZ() * t2 + points[1].getZ() * (1 - t2);
-        graphicsDrawStraightLine(x1, x2, z1, z2, y, cIndex, zBuffer);
+        float t = (x - xMin) / (float)(xMax - xMin);
+
+        float z = zMin * (1 - t) + zMax * t;
+        int index = y * WIDTH + x;
+        if (zBuffer[index] > z)
+        {
+            zBuffer[index] = z;
+            if (tex >= 0)
+            {
+                float wz = 1 / ooz;
+                int xPix = (u * wz) * (texture->width - 1);
+                int yPix = (v * wz) * (texture->height - 1);
+                int tindex = (yPix * texture->width) + xPix;
+                graphicsDrawPoint(x, y, texture->pixels[tindex].R, texture->pixels[tindex].G, texture->pixels[tindex].B);
+            }
+        }
+        u += gradients.uXStep;
+        v += gradients.vXStep;
+        ooz += gradients.oozXStep;
     }
 }
 
-void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBuffer[WIDTH * HEIGHT])
+void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBuffer[WIDTH * HEIGHT], int tex)
 {
+    Edge *left = A;
+    Edge *right = B;
+    if (orientation)
+    {
+        swap(left, right);
+    }
+    for (int y = B->yStart; y < B->yEnd; y++)
+    {
+        drawScanLine(gradients, *left, *right, y, zBuffer, tex);
+        left->step();
+        right->step();
+    }
+}
+
+void fillTriangle(Point3D points[3], float u[3], float v[3], float z[3], float zBuffer[WIDTH * HEIGHT], int tex)
+{
+    Gradients gradients = Gradients(points, u, v, z);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], u[0], v[0], z[0]);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], u[0], v[0], z[0]);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], u[1], v[1], z[1]);
+
+    bool orientation = triangleOrientation(points);
+
+    scanEdge(gradients, topToBottom, topToMiddle, orientation, zBuffer, tex);
+    scanEdge(gradients, topToBottom, middleToBottom, orientation, zBuffer, tex);
+    delete topToBottom;
+    delete topToMiddle;
+    delete middleToBottom;
+}
+
+void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
+{
+    float wz[3];
     Matrix projectedPoints[3];
     Point3D nPoints[3];
+    float uTemp[3] = {u[0], u[1], u[2]};
+    float vTemp[3] = {v[0], v[1], v[2]};
     bool draw = true;
     float x, y, z;
     for (int i = 0; i < 3; i++)
@@ -82,6 +119,7 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBu
             nPoints[i].setX((x + 1) * WIDTHD2);
             nPoints[i].setY((y + 1) * HEIGHTD2);
             nPoints[i].setZ(z);
+            wz[i] = projectedPoints[i].getValue(12);
         }
     }
     if (draw)
@@ -91,10 +129,15 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float zBu
             for (int j = i; j < 3; j++)
             {
                 if (nPoints[j].getY() < nPoints[i].getY())
+                {
                     swap(nPoints[j], nPoints[i]);
+                    swap(uTemp[j], uTemp[i]);
+                    swap(vTemp[j], vTemp[i]);
+                    swap(wz[j], wz[i]);
+                }
             }
         }
-        fillTriangle(nPoints, cIndex, zBuffer);
+        fillTriangle(nPoints, uTemp, vTemp, wz, zBuffer, tex);
     }
 }
 
@@ -127,6 +170,34 @@ Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
     values[15] = 1;
     Matrix translation = Matrix(values, 4);
     return rotation * translation;
+}
+
+Color::Color()
+{
+}
+
+Color::Color(float R, float G, float B, float A)
+{
+    this->R = R;
+    this->G = G;
+    this->B = B;
+    this->A = A;
+}
+
+Color Color::operator+(Color other)
+{
+    return Color(R + other.R, G + other.G, B + other.B, A + other.A);
+}
+
+Color Color::operator-(Color other)
+{
+
+    return Color(R - other.R, G - other.G, B - other.B, A - other.A);
+}
+
+Color Color::operator*(float value)
+{
+    return Color(R * value, G * value, B * value, A * value);
 }
 
 Point3D::Point3D()
@@ -236,6 +307,80 @@ void Point3D::print()
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
+Gradients::Gradients(Point3D points[3], float u[3], float v[3], float z[3])
+{
+    float y02 = points[0].getY() - points[2].getY();
+    float y12 = points[1].getY() - points[2].getY();
+    float x02 = points[0].getX() - points[2].getX();
+    float x12 = points[1].getX() - points[2].getX();
+
+    float oodx = 1 / (x12 * y02 - x02 * y12);
+    float oody = -oodx;
+
+    // z gradient
+    float c02 = (points[0].getZ()) - (points[2].getZ());
+    float c12 = (points[1].getZ()) - (points[2].getZ());
+    zXStep = (c12 * y02 - c02 * y12) * oodx;
+    zYStep = (c12 * x02 - c02 * x12) * oody;
+
+    // 1/z gradients
+    float ooz0 = 1 / z[0];
+    float ooz1 = 1 / z[1];
+    float ooz2 = 1 / z[2];
+
+    c02 = ooz0 - ooz2;
+    c12 = ooz1 - ooz2;
+    oozXStep = (c12 * y02 - c02 * y12) * oodx;
+    oozYStep = (c12 * x02 - c02 * x12) * oody;
+
+    // u/z gradients
+    c02 = (u[0] * ooz0) - (u[2] * ooz2);
+    c12 = (u[1] * ooz1) - (u[2] * ooz2);
+    uXStep = (c12 * y02 - c02 * y12) * oodx;
+    uYStep = (c12 * x02 - c02 * x12) * oody;
+
+    // v/z gradients
+    c02 = (v[0] * ooz0) - (v[2] * ooz2);
+    c12 = (v[1] * ooz1) - (v[2] * ooz2);
+    vXStep = (c12 * y02 - c02 * y12) * oodx;
+    vYStep = (c12 * x02 - c02 * x12) * oody;
+}
+
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minYU, float minYV, float minYZ)
+{
+    yStart = (int)ceil(minYPoint.getY());
+    yEnd = (int)ceil(maxYPoint.getY());
+
+    float dy = maxYPoint.getY() - minYPoint.getY();
+    float dx = maxYPoint.getX() - minYPoint.getX();
+
+    float yPrestep = yStart - minYPoint.getY();
+    xStep = dx / dy;
+    x = minYPoint.getX() + yPrestep * xStep;
+    float xPrestep = x - minYPoint.getX();
+
+    z = (minYPoint.getZ()) + gradients.zYStep * yPrestep + gradients.zXStep * xPrestep;
+    zStep = gradients.zYStep + (gradients.zXStep * xStep);
+
+    ooz = (1 / minYZ) + gradients.oozYStep * yPrestep + gradients.oozXStep * xPrestep;
+    oozStep = gradients.oozYStep + (gradients.oozXStep * xStep);
+
+    u = (minYU / minYZ) + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
+    uStep = gradients.uYStep + (gradients.uXStep * xStep);
+
+    v = (minYV / minYZ) + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
+    vStep = gradients.vYStep + (gradients.vXStep * xStep);
+}
+
+void Edge::step()
+{
+    x += xStep;
+    z += zStep;
+    ooz += oozStep;
+    u += uStep;
+    v += vStep;
+}
+
 Triangle3D::Triangle3D()
 {
     this->points[0] = -1;
@@ -272,6 +417,31 @@ int Triangle3D::getP3()
     return this->points[2];
 }
 
+float Triangle3D::getUTexel(int index)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "U Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    return this->uTexels[index];
+}
+
+float Triangle3D::getVTexel(int index)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "V Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    return this->vTexels[index];
+}
+
+int Triangle3D::getTexture()
+{
+    return this->texture;
+}
+
 void Triangle3D::setP1(int p1)
 {
     this->points[0] = p1;
@@ -287,55 +457,30 @@ void Triangle3D::setP3(int p3)
     this->points[2] = p3;
 }
 
-// bool Triangle3D::pointInTriangle(int x, int y)
-// {
-//     Vector3D *j = new Vector3D(
-//         this->points[0].getX(), this->points[0].getY(), this->points[0].getZ(),
-//         this->points[2].getX(), this->points[2].getY(), this->points[2].getZ());
-//     Vector3D *k = new Vector3D(
-//         this->points[0].getX(), this->points[0].getY(), this->points[0].getZ(),
-//         this->points[1].getX(), this->points[1].getY(), this->points[1].getZ());
-//     return pointInside(x, y, this->points, j, k);
-// }
+void Triangle3D::setUTexel(int index, float value)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "U Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    this->uTexels[index] = value;
+}
 
-// /* Barycentric Triangle filling!!! */
+void Triangle3D::setVTexel(int index, float value)
+{
+    if (index < 0 || index > 2)
+    {
+        cout << "V Texel Index OUT OF RANGE!" << endl;
+        exit(1);
+    }
+    this->vTexels[index] = value;
+}
 
-// void Triangle3D::draw(Color color)
-// {
-//     Point3D *points[3] = {lines[0].getP1(), lines[0].getP2(), lines[2].getP1()};
-//     int yBox[2] = {max(points[0]->getY(), 0), min(points[2]->getY(), HEIGHT)};
-//     if (yBox[0] < yBox[1])
-//     {
-//         int xBox[2] = {WIDTH, 0};
-//         for (int i = 0; i < 3; i++)
-//         {
-//             xBox[0] = max(0, min(xBox[0], points[i]->getX()));
-//             xBox[1] = min(WIDTH, max(xBox[1], points[i]->getX()));
-//         }
-//         if (xBox[0] >= xBox[1])
-//         {
-//             cout << "Triangle is outside of screen!" << endl;
-//         }
-//         else
-//         {
-//             for (int i = xBox[0]; i <= xBox[1]; i++)
-//             {
-//                 for (int j = yBox[0]; j < yBox[1]; j++)
-//                 {
-//                     bool draw = this->pointInTriangle(i, j);
-//                     if (draw)
-//                     {
-//                         graphicsDrawPoint(i, j, color);
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     else
-//     {
-//         cout << "Triangle is outside of screen!" << endl;
-//     }
-// }
+void Triangle3D::setTexture(int index)
+{
+    this->texture = index;
+}
 
 void Matrix::clear()
 {
@@ -435,48 +580,6 @@ Matrix::Matrix(Point3D *vertex)
     this->values[15] = 1;
 }
 
-void Matrix::printMatrix()
-{
-    cout << "Matrix" << endl;
-    if (this->onebyX)
-    {
-        int length = this->two ? 2 : this->three ? 3 : 4;
-        for (int i = 0; i < length; i++)
-        {
-            printf("%.2f\n", this->values[i * 4]);
-            if (i + 1 < length)
-            {
-                printf("----\n");
-            }
-        }
-    }
-    if (this->two)
-    {
-        printf("%.2f | %.2f\n", this->values[0], this->values[1]);
-        printf("-----------\n");
-        printf("%.2f | %.2f\n", this->values[4], this->values[5]);
-    }
-    if (this->three)
-    {
-        printf("%.2f | %.2f | %.2f\n", this->values[0], this->values[1], this->values[2]);
-        printf("------------------\n");
-        printf("%.2f | %.2f | %.2f\n", this->values[4], this->values[5], this->values[6]);
-        printf("------------------\n");
-        printf("%.2f | %.2f | %.2f\n", this->values[8], this->values[9], this->values[10]);
-    }
-    if (this->four)
-    {
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[0], this->values[1], this->values[2], this->values[3]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[4], this->values[5], this->values[6], this->values[7]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[8], this->values[9], this->values[10], this->values[11]);
-        printf("-------------------------\n");
-        printf("%.2f | %.2f | %.2f | %.2f\n", this->values[12], this->values[13], this->values[14], this->values[15]);
-    }
-    cout << "Matrix End" << endl << endl;
-}
-
 int Matrix::getSize()
 {
     if (this->two)
@@ -546,6 +649,61 @@ Matrix Matrix::operator*(Matrix m2)
 
     f.setSize(this->getSize());
     return f;
+}
+
+Object::Object()
+{
+    this->name = (char *)"No Name";
+    this->numVertices = 0;
+    this->numTriangles = 0;
+}
+
+Object::Object(char *name)
+{
+    this->name = name;
+    this->numVertices = 0;
+    this->numTriangles = 0;
+}
+
+Object::~Object()
+{
+    delete this->vertices;
+    delete this->triangles;
+}
+
+void Object::mallocVertices(Point3D *vertices)
+{
+    this->vertices = (Point3D *)malloc(this->numVertices * sizeof(*this->vertices));
+    for (int i = 0; i < this->numVertices; i++)
+    {
+        this->vertices[i] = vertices[i];
+    }
+}
+
+void Object::mallocTriangles(Triangle3D *triangles)
+{
+    this->triangles = (Triangle3D *)malloc(this->numTriangles * sizeof(*this->triangles));
+    for (int i = 0; i < this->numTriangles; i++)
+    {
+        this->triangles[i] = triangles[i];
+    }
+}
+
+void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
+{
+    for (int i = 0; i < this->numTriangles; i++)
+    {
+        Triangle3D *t = &this->triangles[i];
+        Point3D movedPoints[3];
+        for (int j = 0; j < 3; j++)
+        {
+            Point3D p = this->vertices[t->getPoint(j) - 1];
+            p.rotateQ(pitch, yaw, rAngle);
+            p.translate(dx, dy, dz);
+            movedPoints[j] = p;
+        }
+        drawTriangle(floor(i / 2.0), P, V, movedPoints, this->triangles[i].uTexels, this->triangles[i].vTexels, this->triangles[i].getTexture(), zBuffer);
+    }
 }
 
 Quarternion::Quarternion()

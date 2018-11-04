@@ -2,13 +2,16 @@
 #define DATA_IO_INCLUDED
 
 #include "worldmath.h"
+#include "structures.h"
 
-extern Point3D *vertices;
-extern Triangle3D *triangles;
-extern int numVertices;
-extern int numTriangles;
+extern Object *objects;
+extern int numObjects;
+extern struct texture *textures;
+extern int numTextures;
 
 void LoadObject(char *);
+void LoadTexture(char *);
+void LoadPCXFile(char *, struct texture *);
 void UnloadData();
 
 #endif

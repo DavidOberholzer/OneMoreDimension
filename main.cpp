@@ -84,9 +84,10 @@ int main()
 {
     bool done = false;
     graphicsStartup();
-    LoadObject((char *)"cube.txt");
-    Matrix *P = new Matrix(1, 10, M_PI * 5.0 / 12.0, 3.0 / 4.0);
-    Point3D origin = Point3D(0, 0, 0);
+    LoadObject((char *)"grass_cube.txt");
+    LoadObject((char *)"sand_cube.txt");
+    LoadObject((char *)"water_cube.txt");
+    Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 10.0, 3.0 / 4.0);
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -103,19 +104,31 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-        for (int i = 0; i < numTriangles; i++)
-        {
-            Triangle3D *t = &triangles[i];
-            Point3D movedPoints[3];
-            for (int j = 0; j < 3; j++)
-            {
-                Point3D p = vertices[t->getPoint(j) - 1];
-                p.rotateQ(-M_PI / 4, M_PI / 4, angle);
-                p.translate(0, 0, -3);
-                movedPoints[j] = p;
-            }
-            drawTriangle(floor(i / 2.0), P, &V, movedPoints, zBuffer);
-        }
+        objects[0].drawObject(0, 0, angle, -1, 0, -3, P, &V, zBuffer);
+        objects[1].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
+        objects[2].drawObject(0, 0, 0, 0, 0, -5, P, &V, zBuffer);
+
+        objects[0].drawObject(0, 0, 0, -2, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -1, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 0, 3, 3, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 2, 4, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 2, 5, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -3, 3, 6, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 2, 4, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 2, 5, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 1, 3, 6, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -2, 3, 7, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, -1, 3, 7, P, &V, zBuffer);
+        objects[0].drawObject(0, 0, 0, 0, 3, 7, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -1, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 6, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 5, P, &V, zBuffer);
+        objects[2].drawObject(0, 0, 0, -1, 3, 5, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 5, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -2, 3, 4, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, -1, 3, 4, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, 0, 0, 3, 4, P, &V, zBuffer);
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;
