@@ -10,9 +10,9 @@
 using namespace std;
 
 bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-Point3D U = Point3D(0, 1, 0);
-Point3D R = Point3D(1, 0, 0);
-Point3D D = Point3D(0, 0, 1);
+Point3D U = Point3D(0, 1, 0, 0);
+Point3D R = Point3D(1, 0, 0, 0);
+Point3D D = Point3D(0, 0, 1, 0);
 float dx = 0.0;
 float dy = 0.0;
 float dz = 0.0;

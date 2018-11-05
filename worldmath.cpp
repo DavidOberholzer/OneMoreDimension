@@ -91,11 +91,83 @@ void fillTriangle(Point3D points[3], float u[3], float v[3], float z[3], float z
     delete middleToBottom;
 }
 
+int clipPointComponent(Point3D *vertices, Point3D *texels, int count, int component, float componentFactor, Point3D *results, Point3D *texelResults)
+{
+    int resultCount = 0;
+    Point3D previousPoint = vertices[count - 1];
+    Point3D previousTexel = texels[count - 1];
+    Point3D *p, *tp;
+    float previousComponent = previousPoint.getComponent(component) * componentFactor;
+    bool previousNotClipped = previousComponent <= previousPoint.getW();
+    for (int i = 0; i < count; i++)
+    {
+        Point3D currentPoint = vertices[i];
+        Point3D currentTexel = texels[i];
+        float currentComponent = currentPoint.getComponent(component);
+        bool currentNotClipped = currentComponent <= currentPoint.getW();
+
+        if (currentNotClipped ^ previousNotClipped)
+        {
+            float ratio = (previousPoint.getW() - previousComponent) /
+                          ((previousPoint.getW() - previousComponent) -
+                           (currentPoint.getW() - currentComponent));
+            results = (Point3D *)realloc(results, ++resultCount * sizeof(Point3D));
+    //         p = &results[resultCount - 1];
+    //         Point3D newPoint = lerpPoint(currentPoint, previousPoint, ratio);
+    //         // p = new Point3D(newPoint.getX(), newPoint.getY(), newPoint.getZ(), newPoint.getW());
+
+    //         texelResults = (Point3D *)realloc(texelResults, resultCount * sizeof(Point3D));
+    //         tp = &texelResults[resultCount - 1];
+    //         newPoint = lerpPoint(currentTexel, previousTexel, ratio);
+    //         // tp = new Point3D(newPoint.getX(), newPoint.getY(), 0, 0);
+        }
+
+        if (currentNotClipped)
+        {
+            // results = (Point3D *)realloc(results, ++resultCount * sizeof(Point3D));
+    //         p = &results[resultCount - 1];
+    //         // p = new Point3D(currentPoint.getX(), currentPoint.getY(), currentPoint.getZ(), currentPoint.getZ());
+
+    //         texelResults = (Point3D *)realloc(texelResults, resultCount * sizeof(Point3D));
+    //         tp = &texelResults[resultCount - 1];
+    //         // tp = new Point3D(currentPoint.getX(), currentPoint.getY(), 0, 0);
+        }
+        previousPoint = currentPoint;
+        previousTexel = currentTexel;
+        previousComponent = currentComponent;
+        previousNotClipped = currentNotClipped;
+    }
+    return resultCount;
+}
+
+bool clipPointAxis(Point3D *vertices, Point3D *texels, int component, int nVertices)
+{
+    Point3D *auxVertices, *auxTexels;
+    int count1 = clipPointComponent(vertices, texels, nVertices, component, 1.0, auxVertices, auxTexels);
+    // vertices = (Point3D *)malloc(0);
+    // texels = (Point3D *)malloc(0);
+
+    // if (count1 < 0)
+    // {
+    //     return false;
+    // }
+
+    // int count2 = clipPointComponent(auxVertices, auxTexels, count1, component, -1.0, vertices, texels);
+    // auxVertices = (Point3D *)malloc(0);
+    // auxTexels = (Point3D *)malloc(0);
+    int count2 = 0;
+    return count2 > 0;
+}
+
 void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
     float wz[3];
     Matrix projectedPoints[3];
     Point3D nPoints[3];
+    Point3D *pPoints;
+    pPoints = (Point3D *)malloc(3 * sizeof(Point3D));
+    Point3D *texels;
+    texels = (Point3D *)malloc(3 * sizeof(Point3D));
     float uTemp[3] = {u[0], u[1], u[2]};
     float vTemp[3] = {v[0], v[1], v[2]};
     bool draw = true;
@@ -113,6 +185,12 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
         }
         else
         {
+            pPoints[i].setX(projectedPoints[i].getValue(0));
+            pPoints[i].setY(projectedPoints[i].getValue(4));
+            pPoints[i].setZ(projectedPoints[i].getValue(8));
+            pPoints[i].setW(projectedPoints[i].getValue(12));
+            texels[i].setX(u[i]);
+            texels[i].setY(u[i]);
             x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
             y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
             z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
@@ -122,6 +200,7 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
             wz[i] = projectedPoints[i].getValue(12);
         }
     }
+    bool yo = clipPointAxis(pPoints, texels, 0, 3);
     if (draw)
     {
         for (int i = 0; i < 3; i++)
@@ -139,6 +218,15 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
         }
         fillTriangle(nPoints, uTemp, vTemp, wz, zBuffer, tex);
     }
+}
+
+Point3D lerpPoint(Point3D p2, Point3D p1, float t)
+{
+    float x = p2.getX() * t + p1.getX() * (1 - t);
+    float y = p2.getY() * t + p1.getY() * (1 - t);
+    float z = p2.getZ() * t + p1.getZ() * (1 - t);
+    float w = p2.getW() * t + p1.getW() * (1 - t);
+    return Point3D(x, y, z, w);
 }
 
 Matrix viewMatrix(Point3D U, Point3D R, Point3D D, float dx, float dy, float dz)
@@ -205,13 +293,15 @@ Point3D::Point3D()
     x = 0;
     y = 0;
     z = 0;
+    w = 0;
 }
 
-Point3D::Point3D(float x, float y, float z)
+Point3D::Point3D(float x, float y, float z, float w)
 {
     this->x = x;
     this->y = y;
     this->z = z;
+    this->w = w;
 }
 
 void Point3D::setX(float x)
@@ -229,11 +319,16 @@ void Point3D::setZ(float z)
     this->z = z;
 }
 
+void Point3D::setW(float w)
+{
+    this->w = w;
+}
+
 void Point3D::rotateQ(float pitch, float yaw, float angle)
 {
     // Quarternion Rotation
     Quarternion q = Quarternion(pitch, yaw, angle);
-    Point3D r = q * Point3D(this->x, this->y, this->z);
+    Point3D r = q * Point3D(this->x, this->y, this->z, 0);
     this->x = r.getX();
     this->y = r.getY();
     this->z = r.getZ();
@@ -287,7 +382,7 @@ float Point3D::dot(Point3D p)
 
 Point3D Point3D::scaledVector(float scale)
 {
-    return Point3D(this->x * scale, this->y * scale, this->z * scale);
+    return Point3D(this->x * scale, this->y * scale, this->z * scale, 0);
 }
 
 Point3D Point3D::cross(Point3D p)
@@ -299,6 +394,25 @@ Point3D Point3D::cross(Point3D p)
     r.setZ(this->x * p.getY() - this->y * p.getX());
 
     return r;
+}
+
+float Point3D::getComponent(int index)
+{
+    switch (index)
+    {
+    case 0:
+        return this->x;
+        break;
+    case 1:
+        return this->y;
+        break;
+    case 2:
+        return this->z;
+        break;
+    case 3:
+        return this->w;
+        break;
+    }
 }
 
 void Point3D::print()
@@ -775,8 +889,8 @@ Quarternion Quarternion::operator*(Quarternion q)
     Quarternion result;
     if (q.isValid() && this->isValid())
     {
-        Point3D p1 = Point3D(this->x, this->y, this->z);
-        Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ());
+        Point3D p1 = Point3D(this->x, this->y, this->z, 0);
+        Point3D p2 = Point3D(q.getX(), q.getY(), q.getZ(), 0);
         Point3D cross = p1.cross(p2);
 
         result.setW(this->w * q.getW() + p1.dot(p2));
@@ -808,7 +922,7 @@ Point3D Quarternion::operator*(Point3D p)
     // Only if a rotation angle is present.
     if (this->w)
     {
-        Point3D pq = Point3D(this->x, this->y, this->z);
+        Point3D pq = Point3D(this->x, this->y, this->z, 0);
         float dot1 = pq.dot(p);
         float dot2 = pq.dot(pq);
         Point3D cross = pq.cross(p);
