@@ -5,6 +5,8 @@
 
 using namespace std;
 
+#define MAX_VERTICES 12
+
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
@@ -69,21 +71,21 @@ void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBu
     }
     for (int y = B->yStart; y < B->yEnd; y++)
     {
-        drawScanLine(gradients, *left, *right, y, zBuffer, tex);
+        if (y > 0 || y < HEIGHT)
+            drawScanLine(gradients, *left, *right, y, zBuffer, tex);
         left->step();
         right->step();
     }
 }
 
-void fillTriangle(Point3D points[3], float u[3], float v[3], float z[3], float zBuffer[WIDTH * HEIGHT], int tex)
+void fillTriangle(Point3D points[3], Point3D texels[3], float zBuffer[WIDTH * HEIGHT], int tex)
 {
-    Gradients gradients = Gradients(points, u, v, z);
-    Edge *topToBottom = new Edge(gradients, points[0], points[2], u[0], v[0], z[0]);
-    Edge *topToMiddle = new Edge(gradients, points[0], points[1], u[0], v[0], z[0]);
-    Edge *middleToBottom = new Edge(gradients, points[1], points[2], u[1], v[1], z[1]);
+    Gradients gradients = Gradients(points, texels);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], texels[0]);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], texels[0]);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], texels[1]);
 
     bool orientation = triangleOrientation(points);
-
     scanEdge(gradients, topToBottom, topToMiddle, orientation, zBuffer, tex);
     scanEdge(gradients, topToBottom, middleToBottom, orientation, zBuffer, tex);
     delete topToBottom;
@@ -91,7 +93,53 @@ void fillTriangle(Point3D points[3], float u[3], float v[3], float z[3], float z
     delete middleToBottom;
 }
 
-int clipPointComponent(Point3D *vertices, Point3D *texels, int count, int component, float componentFactor, Point3D *results, Point3D *texelResults)
+void sortTriangle(Point3D nPoints[3], Point3D texels[3], float zBuffer[WIDTH * HEIGHT], int tex)
+{
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = i; j < 3; j++)
+        {
+            if (nPoints[j].getY() < nPoints[i].getY())
+            {
+                swap(nPoints[j], nPoints[i]);
+                swap(texels[j], texels[i]);
+            }
+        }
+    }
+    fillTriangle(nPoints, texels, zBuffer, tex);
+}
+
+void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES], int count, float zBuffer[WIDTH * HEIGHT], int tex)
+{
+    float x, y, z;
+    for (int i = 0; i < count; i++)
+    {
+        x = ((nPoints[i].getX() / nPoints[i].getW()) + 1) * WIDTHD2;
+        y = ((nPoints[i].getY() / nPoints[i].getW()) + 1) * HEIGHTD2;
+        z = nPoints[i].getZ() / nPoints[i].getW();
+        nPoints[i].setX(x);
+        nPoints[i].setY(y);
+        nPoints[i].setZ(z);
+    }
+    Point3D start = nPoints[0];
+    Point3D startTex = texels[0];
+    for (int i = 1; i < count - 1; i++)
+    {
+        cout << "count: " << count << endl;
+        cout << "i: " << i << endl;
+        Point3D group[3] = {
+            Point3D(start.getX(), start.getY(), start.getZ(), start.getW()),
+            Point3D(nPoints[i].getX(), nPoints[i].getY(), nPoints[i].getZ(), nPoints[i].getW()),
+            Point3D(nPoints[i + 1].getX(), nPoints[i + 1].getY(), nPoints[i + 1].getZ(), nPoints[i + 1].getW())};
+        Point3D texGroup[3] = {
+            Point3D(startTex.getX(), startTex.getY(), startTex.getZ(), startTex.getW()),
+            Point3D(texels[i].getX(), texels[i].getY(), texels[i].getZ(), texels[i].getW()),
+            Point3D(texels[i + 1].getX(), texels[i + 1].getY(), texels[i + 1].getZ(), texels[i + 1].getW())};
+        sortTriangle(group, texGroup, zBuffer, tex);
+    }
+}
+
+int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], int count, int component, float componentFactor, Point3D results[MAX_VERTICES], Point3D texelResults[MAX_VERTICES])
 {
     int resultCount = 0;
     Point3D previousPoint = vertices[count - 1];
@@ -101,36 +149,55 @@ int clipPointComponent(Point3D *vertices, Point3D *texels, int count, int compon
     bool previousNotClipped = previousComponent <= previousPoint.getW();
     for (int i = 0; i < count; i++)
     {
+        bool added = false;
         Point3D currentPoint = vertices[i];
         Point3D currentTexel = texels[i];
         float currentComponent = currentPoint.getComponent(component);
-        bool currentNotClipped = currentComponent <= currentPoint.getW();
-
+        bool currentNotClipped = (currentComponent <= currentPoint.getW());
         if (currentNotClipped ^ previousNotClipped)
         {
+            added = true;
             float ratio = (previousPoint.getW() - previousComponent) /
                           ((previousPoint.getW() - previousComponent) -
                            (currentPoint.getW() - currentComponent));
-            results = (Point3D *)realloc(results, ++resultCount * sizeof(Point3D));
-    //         p = &results[resultCount - 1];
-    //         Point3D newPoint = lerpPoint(currentPoint, previousPoint, ratio);
-    //         // p = new Point3D(newPoint.getX(), newPoint.getY(), newPoint.getZ(), newPoint.getW());
+            resultCount++;
+            if (resultCount > MAX_VERTICES)
+            {
+                cout << count << endl;
+                cout << "Too many vertices!" << endl;
+                exit(1);
+            }
+            p = &results[resultCount - 1];
+            Point3D newPoint = lerpPoint(currentPoint, previousPoint, ratio);
+            p->setX(newPoint.getX());
+            p->setY(newPoint.getY());
+            p->setZ(newPoint.getZ());
+            p->setW(newPoint.getW());
 
-    //         texelResults = (Point3D *)realloc(texelResults, resultCount * sizeof(Point3D));
-    //         tp = &texelResults[resultCount - 1];
-    //         newPoint = lerpPoint(currentTexel, previousTexel, ratio);
-    //         // tp = new Point3D(newPoint.getX(), newPoint.getY(), 0, 0);
+            tp = &texelResults[resultCount - 1];
+            newPoint = lerpPoint(currentTexel, previousTexel, ratio);
+            tp->setX(newPoint.getX());
+            tp->setY(newPoint.getY());
         }
 
         if (currentNotClipped)
         {
-            // results = (Point3D *)realloc(results, ++resultCount * sizeof(Point3D));
-    //         p = &results[resultCount - 1];
-    //         // p = new Point3D(currentPoint.getX(), currentPoint.getY(), currentPoint.getZ(), currentPoint.getZ());
+            resultCount++;
+            if (resultCount > MAX_VERTICES)
+            {
+                cout << count << endl;
+                cout << "Too many vertices!" << endl;
+                exit(1);
+            }
+            p = &results[resultCount - 1];
+            p->setX(currentPoint.getX());
+            p->setY(currentPoint.getY());
+            p->setZ(currentPoint.getZ());
+            p->setW(currentPoint.getW());
 
-    //         texelResults = (Point3D *)realloc(texelResults, resultCount * sizeof(Point3D));
-    //         tp = &texelResults[resultCount - 1];
-    //         // tp = new Point3D(currentPoint.getX(), currentPoint.getY(), 0, 0);
+            tp = &texelResults[resultCount - 1];
+            tp->setX(currentTexel.getX());
+            tp->setY(currentTexel.getY());
         }
         previousPoint = currentPoint;
         previousTexel = currentTexel;
@@ -140,23 +207,19 @@ int clipPointComponent(Point3D *vertices, Point3D *texels, int count, int compon
     return resultCount;
 }
 
-bool clipPointAxis(Point3D *vertices, Point3D *texels, int component, int nVertices)
+int clipPointAxis(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], int component, int nVertices)
 {
-    Point3D *auxVertices, *auxTexels;
+    Point3D auxVertices[MAX_VERTICES];
+    Point3D auxTexels[MAX_VERTICES];
     int count1 = clipPointComponent(vertices, texels, nVertices, component, 1.0, auxVertices, auxTexels);
-    // vertices = (Point3D *)malloc(0);
-    // texels = (Point3D *)malloc(0);
 
-    // if (count1 < 0)
-    // {
-    //     return false;
-    // }
+    if (count1 == 0)
+    {
+        return 0;
+    }
 
-    // int count2 = clipPointComponent(auxVertices, auxTexels, count1, component, -1.0, vertices, texels);
-    // auxVertices = (Point3D *)malloc(0);
-    // auxTexels = (Point3D *)malloc(0);
-    int count2 = 0;
-    return count2 > 0;
+    int count2 = clipPointComponent(auxVertices, auxTexels, count1, component, -1.0, vertices, texels);
+    return count2;
 }
 
 void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
@@ -164,59 +227,34 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
     float wz[3];
     Matrix projectedPoints[3];
     Point3D nPoints[3];
-    Point3D *pPoints;
-    pPoints = (Point3D *)malloc(3 * sizeof(Point3D));
-    Point3D *texels;
-    texels = (Point3D *)malloc(3 * sizeof(Point3D));
-    float uTemp[3] = {u[0], u[1], u[2]};
-    float vTemp[3] = {v[0], v[1], v[2]};
-    bool draw = true;
+    Point3D pPoints[MAX_VERTICES];
+    Point3D texels[MAX_VERTICES];
+    bool outside[3] = {0, 0, 0};
     float x, y, z;
     for (int i = 0; i < 3; i++)
     {
         Point3D p = V->xPoint(points[i]);
         projectedPoints[i] = P->projectPoint(p, false);
-        if (fabs(projectedPoints[i].getValue(0)) > fabs(p.getZ()) ||
-            fabs(projectedPoints[i].getValue(4)) > fabs(p.getZ()) ||
-            fabs(projectedPoints[i].getValue(8)) > fabs(p.getZ()))
-        {
-            draw = false;
-            break;
-        }
-        else
-        {
-            pPoints[i].setX(projectedPoints[i].getValue(0));
-            pPoints[i].setY(projectedPoints[i].getValue(4));
-            pPoints[i].setZ(projectedPoints[i].getValue(8));
-            pPoints[i].setW(projectedPoints[i].getValue(12));
-            texels[i].setX(u[i]);
-            texels[i].setY(u[i]);
-            x = projectedPoints[i].getValue(0) / projectedPoints[i].getValue(12);
-            y = projectedPoints[i].getValue(4) / projectedPoints[i].getValue(12);
-            z = projectedPoints[i].getValue(8) / projectedPoints[i].getValue(12);
-            nPoints[i].setX((x + 1) * WIDTHD2);
-            nPoints[i].setY((y + 1) * HEIGHTD2);
-            nPoints[i].setZ(z);
-            wz[i] = projectedPoints[i].getValue(12);
-        }
+        pPoints[i].setX(projectedPoints[i].getValue(0));
+        pPoints[i].setY(projectedPoints[i].getValue(4));
+        pPoints[i].setZ(projectedPoints[i].getValue(8));
+        pPoints[i].setW(projectedPoints[i].getValue(12));
+        bool xOut = fabs(pPoints[i].getX()) >= fabs(pPoints[i].getW());
+        bool yOut = fabs(pPoints[i].getY()) >= fabs(pPoints[i].getW());
+        bool zOut = fabs(pPoints[i].getZ()) >= fabs(pPoints[i].getW());
+        if (xOut || yOut || zOut)
+            outside[i] = true;
+        texels[i].setX(u[i]);
+        texels[i].setY(v[i]);
     }
-    bool yo = clipPointAxis(pPoints, texels, 0, 3);
-    if (draw)
+    if (outside[0] && outside[1] && outside[2])
+        return;
+    int vCount = clipPointAxis(pPoints, texels, 0, 3);
+    vCount = clipPointAxis(pPoints, texels, 1, vCount);
+    vCount = clipPointAxis(pPoints, texels, 2, vCount);
+    if (vCount > 2)
     {
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = i; j < 3; j++)
-            {
-                if (nPoints[j].getY() < nPoints[i].getY())
-                {
-                    swap(nPoints[j], nPoints[i]);
-                    swap(uTemp[j], uTemp[i]);
-                    swap(vTemp[j], vTemp[i]);
-                    swap(wz[j], wz[i]);
-                }
-            }
-        }
-        fillTriangle(nPoints, uTemp, vTemp, wz, zBuffer, tex);
+        createTriangles(pPoints, texels, vCount, zBuffer, tex);
     }
 }
 
@@ -421,7 +459,7 @@ void Point3D::print()
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
-Gradients::Gradients(Point3D points[3], float u[3], float v[3], float z[3])
+Gradients::Gradients(Point3D points[3], Point3D texels[3])
 {
     float y02 = points[0].getY() - points[2].getY();
     float y12 = points[1].getY() - points[2].getY();
@@ -438,9 +476,9 @@ Gradients::Gradients(Point3D points[3], float u[3], float v[3], float z[3])
     zYStep = (c12 * x02 - c02 * x12) * oody;
 
     // 1/z gradients
-    float ooz0 = 1 / z[0];
-    float ooz1 = 1 / z[1];
-    float ooz2 = 1 / z[2];
+    float ooz0 = 1 / points[0].getW();
+    float ooz1 = 1 / points[1].getW();
+    float ooz2 = 1 / points[2].getW();
 
     c02 = ooz0 - ooz2;
     c12 = ooz1 - ooz2;
@@ -448,19 +486,19 @@ Gradients::Gradients(Point3D points[3], float u[3], float v[3], float z[3])
     oozYStep = (c12 * x02 - c02 * x12) * oody;
 
     // u/z gradients
-    c02 = (u[0] * ooz0) - (u[2] * ooz2);
-    c12 = (u[1] * ooz1) - (u[2] * ooz2);
+    c02 = (texels[0].getX() * ooz0) - (texels[2].getX() * ooz2);
+    c12 = (texels[1].getX() * ooz1) - (texels[2].getX() * ooz2);
     uXStep = (c12 * y02 - c02 * y12) * oodx;
     uYStep = (c12 * x02 - c02 * x12) * oody;
 
     // v/z gradients
-    c02 = (v[0] * ooz0) - (v[2] * ooz2);
-    c12 = (v[1] * ooz1) - (v[2] * ooz2);
+    c02 = (texels[0].getY() * ooz0) - (texels[2].getY() * ooz2);
+    c12 = (texels[1].getY() * ooz1) - (texels[2].getY() * ooz2);
     vXStep = (c12 * y02 - c02 * y12) * oodx;
     vYStep = (c12 * x02 - c02 * x12) * oody;
 }
 
-Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minYU, float minYV, float minYZ)
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, Point3D minYTexel)
 {
     yStart = (int)ceil(minYPoint.getY());
     yEnd = (int)ceil(maxYPoint.getY());
@@ -476,13 +514,13 @@ Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, float minY
     z = (minYPoint.getZ()) + gradients.zYStep * yPrestep + gradients.zXStep * xPrestep;
     zStep = gradients.zYStep + (gradients.zXStep * xStep);
 
-    ooz = (1 / minYZ) + gradients.oozYStep * yPrestep + gradients.oozXStep * xPrestep;
+    ooz = (1 / minYPoint.getW()) + gradients.oozYStep * yPrestep + gradients.oozXStep * xPrestep;
     oozStep = gradients.oozYStep + (gradients.oozXStep * xStep);
 
-    u = (minYU / minYZ) + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
+    u = (minYTexel.getX() / minYPoint.getW()) + gradients.uYStep * yPrestep + gradients.uXStep * xPrestep;
     uStep = gradients.uYStep + (gradients.uXStep * xStep);
 
-    v = (minYV / minYZ) + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
+    v = (minYTexel.getY() / minYPoint.getW()) + gradients.vYStep * yPrestep + gradients.vXStep * xPrestep;
     vStep = gradients.vYStep + (gradients.vXStep * xStep);
 }
 

@@ -63,7 +63,7 @@ public:
   float zXStep, zYStep;
   float uXStep, uYStep;
   float vXStep, vYStep;
-  Gradients(Point3D[3], float[3], float[3], float[3]);
+  Gradients(Point3D[3], Point3D[3]);
 };
 
 class Edge
@@ -78,7 +78,7 @@ public:
   float u, v;
   float uStep, vStep;
   Edge();
-  Edge(Gradients, Point3D, Point3D, float, float, float);
+  Edge(Gradients, Point3D, Point3D, Point3D);
   void step();
 };
 
