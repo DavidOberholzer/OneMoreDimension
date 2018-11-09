@@ -9,53 +9,122 @@
 
 using namespace std;
 
+#define GRAVITY_ACCELERTATION 0.01
+#define GRAVITY_TERMINAL_VELOCITY 0.50
+#define PLAYER_HEIGHT 2
+#define MOVEMENT_SPEED 0.1
+
+class WorldObject
+{
+  public:
+    Object *object;
+    float dx, dy, dz;
+    WorldObject(Object *, float, float, float);
+    ~WorldObject();
+};
+
+WorldObject::WorldObject(Object *object, float dx, float dy, float dz)
+{
+    this->object = object;
+    this->dx = dx;
+    this->dy = dy;
+    this->dz = dz;
+}
+
+WorldObject::~WorldObject()
+{
+    delete object;
+}
+
 bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-Point3D U = Point3D(0, 1, 0, 0);
-Point3D R = Point3D(1, 0, 0, 0);
-Point3D D = Point3D(0, 0, 1, 0);
-float dx = 0.0;
-float dy = 0.0;
-float dz = 0.0;
-float speed = 0.05;
+Point3D U = Point3D(0, 1, 0, 0); // Camera True Up vector
+Point3D R = Point3D(1, 0, 0, 0); // Camera True Right vector
+Point3D D = Point3D(0, 0, 1, 0); // Camera True Directional vector
+Point3D T = Point3D(0, 1, 0, 0); // Camera FPS Up vector
+Point3D F = Point3D(0, 0, 1, 0); // Camera FPS Face vector
+Point3D S = Point3D(1, 0, 0, 0); // Camera FPS Side vector
+float dx = 0.0;                  // Player x position
+float dy = 0.0;                  // Player y position
+float dz = 0.0;                  // Player z position
+float y_v = 0.0;                 // Player y velocity
 Quarternion t;
+bool flying = true;
 
 void cameraMovement()
 {
     Quarternion u, r, d;
     bool ub = false, rb = false, db = false;
-    Point3D ws = D.scaledVector(speed);
-    Point3D ad = R.scaledVector(speed);
+    Point3D fws = D.scaledVector(MOVEMENT_SPEED);
+    Point3D fad = R.scaledVector(MOVEMENT_SPEED);
+    Point3D ws = F.scaledVector(MOVEMENT_SPEED);
+    Point3D ad = S.scaledVector(MOVEMENT_SPEED);
     if (keysPressed[0])
     {
-        dx -= ws.getX();
-        dy -= ws.getY();
-        dz -= ws.getZ();
+        if (flying)
+        {
+            dx -= fws.getX();
+            dy -= fws.getY();
+            dz -= fws.getZ();
+        }
+        else
+        {
+            dx -= ws.getX();
+            dy -= ws.getY();
+            dz -= ws.getZ();
+        }
     }
     if (keysPressed[1])
     {
-        dx += ws.getX();
-        dy += ws.getY();
-        dz += ws.getZ();
+        if (flying)
+        {
+            dx += fws.getX();
+            dy += fws.getY();
+            dz += fws.getZ();
+        }
+        else
+        {
+            dx += ws.getX();
+            dy += ws.getY();
+            dz += ws.getZ();
+        }
     }
     if (keysPressed[2])
     {
-        dx -= ad.getX();
-        dy -= ad.getY();
-        dz -= ad.getZ();
+        if (flying)
+        {
+            dx -= fad.getX();
+            dy -= fad.getY();
+            dz -= fad.getZ();
+        }
+        else
+        {
+            dx -= ad.getX();
+            dy -= ad.getY();
+            dz -= ad.getZ();
+        }
     }
     if (keysPressed[3])
     {
-        dx += ad.getX();
-        dy += ad.getY();
-        dz += ad.getZ();
+        if (flying)
+        {
+            dx += fad.getX();
+            dy += fad.getY();
+            dz += fad.getZ();
+        }
+        else
+        {
+            dx += ad.getX();
+            dy += ad.getY();
+            dz += ad.getZ();
+        }
     }
     if (keysPressed[4])
     {
-        u = Quarternion(U, 0.02);
+        u = Quarternion(flying ? U : T, 0.02);
     }
     if (keysPressed[5])
     {
-        u = Quarternion(U, -0.02);
+        u = Quarternion(flying ? U : T, -0.02);
     }
     if (keysPressed[6])
     {
@@ -65,11 +134,11 @@ void cameraMovement()
     {
         r = Quarternion(R, 0.02);
     }
-    if (keysPressed[8])
+    if (keysPressed[8] && flying)
     {
         d = Quarternion(D, -0.02);
     }
-    if (keysPressed[9])
+    if (keysPressed[9] && flying)
     {
         d = Quarternion(D, 0.02);
     }
@@ -78,6 +147,34 @@ void cameraMovement()
     U = t * U;
     R = t * R;
     D = t * D;
+    if (!flying)
+    {
+        F = u * F;
+        S = u * S;
+    }
+}
+
+bool onFloor()
+{
+    return (dy + PLAYER_HEIGHT) > 2.5;
+}
+
+void accelerate(float *value, float max, float a)
+{
+    *value = (*value + a) > max ? max : (*value + a);
+}
+
+void falling()
+{
+    if (!onFloor() && !flying)
+    {
+        accelerate(&y_v, GRAVITY_TERMINAL_VELOCITY, GRAVITY_ACCELERTATION);
+    }
+    else if (y_v > 0)
+    {
+        accelerate(&y_v, 0.0, -0.1);
+    }
+    dy += y_v;
 }
 
 int main()
@@ -105,7 +202,7 @@ int main()
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
         objects[0].drawObject(0, 0, angle, -1, 0, -3, P, &V, zBuffer);
-        objects[1].drawObject(-M_PI /4, M_PI/4, angle, 1, 0, -3, P, &V, zBuffer);
+        objects[1].drawObject(-M_PI / 4, M_PI / 4, angle, 1, 0, -3, P, &V, zBuffer);
         objects[2].drawObject(0, 0, 0, 0, 0, -5, P, &V, zBuffer);
 
         objects[0].drawObject(0, 0, 0, -2, 3, 3, P, &V, zBuffer);
@@ -174,6 +271,30 @@ int main()
                 case SDLK_u:
                     keysPressed[9] = eType;
                     break;
+                case SDLK_f:
+                    if (eType)
+                    {
+                        flying = !flying;
+                        y_v = 0;
+                        U = Point3D(0, 1, 0, 0);
+                        R = S;
+                        D = F;
+                    }
+                    break;
+                case SDLK_r:
+                    if (eType)
+                    {
+                        dx = 0.0;
+                        dy = 0.0;
+                        dz = 0.0;
+                    }
+                    break;
+                case SDLK_SPACE:
+                    if (eType && !flying)
+                    {
+                        y_v += -0.2;
+                    }
+                    break;
                 case SDLK_ESCAPE:
                     done = true;
                     break;
@@ -181,6 +302,7 @@ int main()
             }
         }
         cameraMovement();
+        falling();
         end = clock();
         double diff = difftime(end, start);
         if (diff < 16667)
