@@ -71,7 +71,7 @@ void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBu
     }
     for (int y = B->yStart; y < B->yEnd; y++)
     {
-        if (y > 0 || y < HEIGHT)
+        if (y > 0 && y < HEIGHT)
             drawScanLine(gradients, *left, *right, y, zBuffer, tex);
         left->step();
         right->step();
@@ -125,8 +125,6 @@ void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES]
     Point3D startTex = texels[0];
     for (int i = 1; i < count - 1; i++)
     {
-        cout << "count: " << count << endl;
-        cout << "i: " << i << endl;
         Point3D group[3] = {
             Point3D(start.getX(), start.getY(), start.getZ(), start.getW()),
             Point3D(nPoints[i].getX(), nPoints[i].getY(), nPoints[i].getZ(), nPoints[i].getW()),
@@ -152,7 +150,7 @@ int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTIC
         bool added = false;
         Point3D currentPoint = vertices[i];
         Point3D currentTexel = texels[i];
-        float currentComponent = currentPoint.getComponent(component);
+        float currentComponent = currentPoint.getComponent(component) * componentFactor;
         bool currentNotClipped = (currentComponent <= currentPoint.getW());
         if (currentNotClipped ^ previousNotClipped)
         {
