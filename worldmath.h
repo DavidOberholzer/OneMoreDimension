@@ -30,13 +30,15 @@ class Point3D
   float x;
   float y;
   float z;
+  float w;
 
 public:
   Point3D();
-  Point3D(float, float, float);
+  Point3D(float, float, float, float);
   void setX(float);
   void setY(float);
   void setZ(float);
+  void setW(float);
   void rotateQ(float, float, float);
   void rotateX(float);
   void rotateY(float);
@@ -46,9 +48,11 @@ public:
   float dot(Point3D);
   Point3D scaledVector(float);
   Point3D cross(Point3D);
+  float getComponent(int);
   float getX() { return x; };
   float getY() { return y; };
   float getZ() { return z; };
+  float getW() { return w; };
   void print();
 };
 
@@ -59,7 +63,7 @@ public:
   float zXStep, zYStep;
   float uXStep, uYStep;
   float vXStep, vYStep;
-  Gradients(Point3D[3], float[3], float[3], float[3]);
+  Gradients(Point3D[3], Point3D[3]);
 };
 
 class Edge
@@ -74,7 +78,7 @@ public:
   float u, v;
   float uStep, vStep;
   Edge();
-  Edge(Gradients, Point3D, Point3D, float, float, float);
+  Edge(Gradients, Point3D, Point3D, Point3D);
   void step();
 };
 
@@ -167,6 +171,7 @@ int dotProduct(int, int, int, int, int, int);
 bool triangleOrientation(Point3D[3]);
 void scanEdge(Gradients, Edge *, Edge *, bool, float[WIDTH * HEIGHT], int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
+Point3D lerpPoint(Point3D, Point3D, float);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
 
 #endif
