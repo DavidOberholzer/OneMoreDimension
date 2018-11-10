@@ -14,6 +14,7 @@ using namespace std;
 #define PLAYER_HEIGHT 3
 #define MOVEMENT_SPEED 0.1
 #define CHUNK 10
+#define FACE 1.0
 
 class Block
 {
@@ -83,26 +84,28 @@ void handleCollision(float x, float y, float z, Block blocks[CHUNK])
             {
                 float x1 = blocks[i].x + corners[j];
                 float z1 = blocks[i].z + corners[j + 1];
-                int newJ = j + 2 > 7 ? 0 : j;
+                int newJ = j + 2 > 7 ? 0 : j + 2;
                 float x2 = blocks[i].x + corners[newJ];
                 float z2 = blocks[i].z + corners[newJ + 1];
-                bool behind = behindLine(dx + x, dz + z, x1, z1, x2, z2);
-                int overlap = boxesOverlap(dx, dz, dx + x, dz + z, x1, z1, x2, z2);
+                float vx = dx + (x > 0 ? x + FACE : x - FACE);
+                float vz = dz + (z > 0 ? z + FACE : z - FACE);
+                bool behind = behindLine(vx, vz, x1, z1, x2, z2);
+                int overlap = boxesOverlap(dx, dz, vx, vz, x1, z1, x2, z2);
                 if (behind && overlap)
                 {
-                    float *newVector = vectorProjection(x, z, x2 - z2, x1 - z1);
+                    float *newVector = vectorProjection(x, z, x2 - x1, z2 - z1);
                     if ((x > 0 && *newVector < 0) ||
                         (x < 0 && *newVector > 0) ||
-                        (y < 0 && *(newVector + 1) > 0) ||
-                        (y < 0 && *(newVector + 1) > 0))
+                        (z < 0 && *(newVector + 1) > 0) ||
+                        (z < 0 && *(newVector + 1) > 0))
                     {
                         x = 0;
-                        y = 0;
+                        z = 0;
                     }
                     else
                     {
                         x = *newVector;
-                        y = *(newVector + 1);
+                        z = *(newVector + 1);
                     }
                 }
             }
@@ -274,7 +277,7 @@ int main()
         Block(&objects[0], 0, 4, -5),
         Block(&objects[0], 1, 3, -5),
         Block(&objects[0], 1, 3, -4),
-        Block(&objects[0], 0, 4, -5),
+        Block(&objects[0], 0, 3, -5),
         Block(&objects[0], 0, 4, -4)};
     time_t start, end;
     float angle = 0.0;
@@ -371,7 +374,7 @@ int main()
                     if (eType && !flying && standing)
                     {
                         standing = false;
-                        y_v -= 0.2;
+                        y_v -= 0.18;
                     }
                     break;
                 case SDLK_ESCAPE:
