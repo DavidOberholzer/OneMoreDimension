@@ -42,7 +42,6 @@ Block::Block(Object *object, int x, int y, int z)
 
 Block::~Block()
 {
-    delete object;
 }
 
 bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -58,8 +57,62 @@ float dz = 0.0;                  // Player z position
 float y_v = 0.0;                 // Player y velocity
 Quarternion t;
 bool flying = true;
+bool standing = false;
+float corners[8] = {
+    0.5, 0.5,
+    0.5, -0.5,
+    -0.5, -0.5,
+    -0.5, 0.5};
 
-void cameraMovement()
+void handleCollision(float x, float y, float z, Block blocks[CHUNK])
+{
+    if (flying)
+    {
+        dx += x;
+        dy += y;
+        dz += z;
+        return;
+    }
+    int py = (int)floor(dy + PLAYER_HEIGHT - 1);
+    int ty = py - 2;
+    for (int i = 0; i < CHUNK; i++)
+    {
+        if (blocks[i].y >= ty && blocks[i].y <= py)
+        {
+            for (int j = 0; j < 8; j += 2)
+            {
+                float x1 = blocks[i].x + corners[j];
+                float z1 = blocks[i].z + corners[j + 1];
+                int newJ = j + 2 > 7 ? 0 : j;
+                float x2 = blocks[i].x + corners[newJ];
+                float z2 = blocks[i].z + corners[newJ + 1];
+                bool behind = behindLine(dx + x, dz + z, x1, z1, x2, z2);
+                int overlap = boxesOverlap(dx, dz, dx + x, dz + z, x1, z1, x2, z2);
+                if (behind && overlap)
+                {
+                    float *newVector = vectorProjection(x, z, x2 - z2, x1 - z1);
+                    if ((x > 0 && *newVector < 0) ||
+                        (x < 0 && *newVector > 0) ||
+                        (y < 0 && *(newVector + 1) > 0) ||
+                        (y < 0 && *(newVector + 1) > 0))
+                    {
+                        x = 0;
+                        y = 0;
+                    }
+                    else
+                    {
+                        x = *newVector;
+                        y = *(newVector + 1);
+                    }
+                }
+            }
+        }
+    }
+    dx += x;
+    dz += z;
+}
+
+void cameraMovement(Block blocks[CHUNK])
 {
     Quarternion u, r, d;
     bool ub = false, rb = false, db = false;
@@ -67,64 +120,65 @@ void cameraMovement()
     Point3D fad = R.scaledVector(MOVEMENT_SPEED);
     Point3D ws = F.scaledVector(MOVEMENT_SPEED);
     Point3D ad = S.scaledVector(MOVEMENT_SPEED);
+    float x = 0, y = 0, z = 0;
     if (keysPressed[0])
     {
         if (flying)
         {
-            dx -= fws.getX();
-            dy -= fws.getY();
-            dz -= fws.getZ();
+            x -= fws.getX();
+            y -= fws.getY();
+            z -= fws.getZ();
         }
         else
         {
-            dx -= ws.getX();
-            dy -= ws.getY();
-            dz -= ws.getZ();
+            x -= ws.getX();
+            y -= ws.getY();
+            z -= ws.getZ();
         }
     }
     if (keysPressed[1])
     {
         if (flying)
         {
-            dx += fws.getX();
-            dy += fws.getY();
-            dz += fws.getZ();
+            x += fws.getX();
+            y += fws.getY();
+            z += fws.getZ();
         }
         else
         {
-            dx += ws.getX();
-            dy += ws.getY();
-            dz += ws.getZ();
+            x += ws.getX();
+            y += ws.getY();
+            z += ws.getZ();
         }
     }
     if (keysPressed[2])
     {
         if (flying)
         {
-            dx -= fad.getX();
-            dy -= fad.getY();
-            dz -= fad.getZ();
+            x -= fad.getX();
+            y -= fad.getY();
+            z -= fad.getZ();
         }
         else
         {
-            dx -= ad.getX();
-            dy -= ad.getY();
-            dz -= ad.getZ();
+            x -= ad.getX();
+            y -= ad.getY();
+            z -= ad.getZ();
         }
     }
     if (keysPressed[3])
     {
         if (flying)
         {
-            dx += fad.getX();
-            dy += fad.getY();
-            dz += fad.getZ();
+            x += fad.getX();
+            y += fad.getY();
+            z += fad.getZ();
         }
         else
         {
-            dx += ad.getX();
-            dy += ad.getY();
-            dz += ad.getZ();
+            x += ad.getX();
+            y += ad.getY();
+            z += ad.getZ();
         }
     }
     if (keysPressed[4])
@@ -161,20 +215,21 @@ void cameraMovement()
         F = u * F;
         S = u * S;
     }
+    handleCollision(x, y, z, blocks);
 }
 
-bool onFloor(Block blocks[CHUNK])
+void onFloor(Block blocks[CHUNK])
 {
     int px = (int)round(dx);
     int py = (int)round(dy);
     int pz = (int)round(dz);
-    bool under = false;
+    standing = false;
     for (int i = 0; i < CHUNK; i++)
     {
         int next_y = py + PLAYER_HEIGHT;
         if (next_y > 5)
         {
-            under = true;
+            standing = true;
             break;
         }
         if (!blocks[i].loaded)
@@ -183,11 +238,10 @@ bool onFloor(Block blocks[CHUNK])
             continue;
         if (next_y > blocks[i].y)
         {
-            under = true;
+            standing = true;
             break;
         }
     }
-    return under;
 }
 
 void accelerate(float *value, float max, float a)
@@ -197,7 +251,7 @@ void accelerate(float *value, float max, float a)
 
 void falling(Block blocks[CHUNK])
 {
-    if (!onFloor(blocks) && !flying)
+    if (!standing && !flying)
     {
         accelerate(&y_v, GRAVITY_TERMINAL_VELOCITY, GRAVITY_ACCELERTATION);
     }
@@ -314,9 +368,10 @@ int main()
                     }
                     break;
                 case SDLK_SPACE:
-                    if (eType && !flying)
+                    if (eType && !flying && standing)
                     {
-                        y_v += -0.2;
+                        standing = false;
+                        y_v -= 0.2;
                     }
                     break;
                 case SDLK_ESCAPE:
@@ -325,7 +380,8 @@ int main()
                 }
             }
         }
-        cameraMovement();
+        cameraMovement(blocks);
+        onFloor(blocks);
         falling(blocks);
         end = clock();
         double diff = difftime(end, start);

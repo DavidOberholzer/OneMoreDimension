@@ -7,9 +7,52 @@ using namespace std;
 
 #define MAX_VERTICES 12
 
+float max(float x, float y)
+{
+    return x >= y ? x : y;
+}
+
+float min(float x, float y)
+{
+    return x <= y ? x : y;
+}
+
+float crossProduct(float x1, float y1, float x2, float y2)
+{
+    return (x1 * y2 - x2 * y1);
+}
+
 int dotProduct(int x1, int y1, int z1, int x2, int y2, int z2)
 {
     return x1 * x2 + y1 * y2 + z1 * z2;
+}
+
+float fDotProduct(float x1, float y1, float z1, float x2, float y2, float z2)
+{
+    return x1 * x2 + y1 * y2;
+}
+
+bool behindLine(float x, float y, float x1, float y1, float x2, float y2)
+{
+    return crossProduct(x2 - x1, y2 - y1, x - x1, y - y1) < 0;
+}
+
+int rangesOverlap(float a0, float a1, float b0, float b1)
+{
+    return ((max(a0, a1) >= min(b0, b1)) && (min(a0, a1) <= max(b0, b1)));
+}
+
+int boxesOverlap(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4)
+{
+    return (rangesOverlap(x1, x2, x3, x4) && rangesOverlap(y1, y2, y3, y4));
+}
+
+float *vectorProjection(float x1, float y1, float x2, float y2)
+{
+    static float ret[2];
+    ret[0] = x2 * fDotProduct(x1, y1, 0, x2, y2, 0) / (x2 * x2 + y2 * y2);
+    ret[1] = y2 * fDotProduct(x1, y1, 0, x2, y2, 0) / (x2 * x2 + y2 * y2);
+    return ret;
 }
 
 bool triangleOrientation(Point3D points[3])

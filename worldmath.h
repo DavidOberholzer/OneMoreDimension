@@ -168,6 +168,9 @@ public:
 };
 
 int dotProduct(int, int, int, int, int, int);
+bool behindLine(float, float, float, float, float, float);
+int boxesOverlap(float, float, float, float, float, float, float, float);
+float *vectorProjection(float, float, float, float);
 bool triangleOrientation(Point3D[3]);
 void scanEdge(Gradients, Edge *, Edge *, bool, float[WIDTH * HEIGHT], int);
 void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
