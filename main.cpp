@@ -11,27 +11,36 @@ using namespace std;
 
 #define GRAVITY_ACCELERTATION 0.01
 #define GRAVITY_TERMINAL_VELOCITY 0.50
-#define PLAYER_HEIGHT 2
+#define PLAYER_HEIGHT 3
 #define MOVEMENT_SPEED 0.1
+#define CHUNK 10
 
-class WorldObject
+class Block
 {
   public:
     Object *object;
-    float dx, dy, dz;
-    WorldObject(Object *, float, float, float);
-    ~WorldObject();
+    int x, y, z;
+    bool loaded;
+    Block();
+    Block(Object *, int, int, int);
+    ~Block();
 };
 
-WorldObject::WorldObject(Object *object, float dx, float dy, float dz)
+Block::Block()
 {
-    this->object = object;
-    this->dx = dx;
-    this->dy = dy;
-    this->dz = dz;
+    this->loaded = false;
 }
 
-WorldObject::~WorldObject()
+Block::Block(Object *object, int x, int y, int z)
+{
+    this->object = object;
+    this->x = x;
+    this->y = y;
+    this->z = z;
+    this->loaded = true;
+}
+
+Block::~Block()
 {
     delete object;
 }
@@ -154,9 +163,31 @@ void cameraMovement()
     }
 }
 
-bool onFloor()
+bool onFloor(Block blocks[CHUNK])
 {
-    return (dy + PLAYER_HEIGHT) > 2.5;
+    int px = (int)round(dx);
+    int py = (int)round(dy);
+    int pz = (int)round(dz);
+    bool under = false;
+    for (int i = 0; i < CHUNK; i++)
+    {
+        int next_y = py + PLAYER_HEIGHT;
+        if (next_y > 5)
+        {
+            under = true;
+            break;
+        }
+        if (!blocks[i].loaded)
+            continue;
+        if (px != blocks[i].x || pz != blocks[i].z || py > blocks[i].y)
+            continue;
+        if (next_y > blocks[i].y)
+        {
+            under = true;
+            break;
+        }
+    }
+    return under;
 }
 
 void accelerate(float *value, float max, float a)
@@ -164,9 +195,9 @@ void accelerate(float *value, float max, float a)
     *value = (*value + a) > max ? max : (*value + a);
 }
 
-void falling()
+void falling(Block blocks[CHUNK])
 {
-    if (!onFloor() && !flying)
+    if (!onFloor(blocks) && !flying)
     {
         accelerate(&y_v, GRAVITY_TERMINAL_VELOCITY, GRAVITY_ACCELERTATION);
     }
@@ -185,6 +216,12 @@ int main()
     LoadObject((char *)"sand_cube.txt");
     LoadObject((char *)"water_cube.txt");
     Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 10.0, 3.0 / 4.0);
+    Block blocks[CHUNK] = {
+        Block(&objects[0], 0, 4, -5),
+        Block(&objects[0], 1, 3, -5),
+        Block(&objects[0], 1, 3, -4),
+        Block(&objects[0], 0, 4, -5),
+        Block(&objects[0], 0, 4, -4)};
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -201,31 +238,12 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-        objects[0].drawObject(0, 0, angle, -1, 0, -3, P, &V, zBuffer);
-        objects[1].drawObject(-M_PI / 4, M_PI / 4, angle, 1, 0, -3, P, &V, zBuffer);
-        objects[2].drawObject(0, 0, 0, 0, 0, -5, P, &V, zBuffer);
-
-        objects[0].drawObject(0, 0, 0, -2, 3, 3, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -1, 3, 3, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, 0, 3, 3, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -3, 2, 4, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -3, 2, 5, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -3, 3, 6, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, 1, 2, 4, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, 1, 2, 5, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, 1, 3, 6, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -2, 3, 7, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, -1, 3, 7, P, &V, zBuffer);
-        objects[0].drawObject(0, 0, 0, 0, 3, 7, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, -2, 3, 6, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, -1, 3, 6, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, 0, 3, 6, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, -2, 3, 5, P, &V, zBuffer);
-        objects[2].drawObject(0, 0, 0, -1, 3, 5, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, 0, 3, 5, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, -2, 3, 4, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, -1, 3, 4, P, &V, zBuffer);
-        objects[1].drawObject(0, 0, 0, 0, 3, 4, P, &V, zBuffer);
+        for (int i = 0; i < CHUNK; i++)
+        {
+            if (!blocks[i].loaded)
+                continue;
+            blocks[i].object->drawObject(0, 0, 0, blocks[i].x, blocks[i].y, blocks[i].z, P, &V, zBuffer);
+        }
         angle += 0.01;
         graphicsFrameDraw();
         SDL_Event event;
@@ -287,6 +305,12 @@ int main()
                         dx = 0.0;
                         dy = 0.0;
                         dz = 0.0;
+                        U = Point3D(0, 1, 0, 0);
+                        R = Point3D(1, 0, 0, 0);
+                        D = Point3D(0, 0, 1, 0);
+                        T = Point3D(0, 1, 0, 0);
+                        F = Point3D(0, 0, 1, 0);
+                        S = Point3D(1, 0, 0, 0);
                     }
                     break;
                 case SDLK_SPACE:
@@ -302,7 +326,7 @@ int main()
             }
         }
         cameraMovement();
-        falling();
+        falling(blocks);
         end = clock();
         double diff = difftime(end, start);
         if (diff < 16667)
