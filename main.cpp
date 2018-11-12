@@ -9,12 +9,13 @@
 
 using namespace std;
 
-#define GRAVITY_ACCELERTATION 0.01
+#define GRAVITY_ACCELERTATION 0.02
 #define GRAVITY_TERMINAL_VELOCITY 0.50
 #define PLAYER_HEIGHT 3
 #define MOVEMENT_SPEED 0.1
-#define CHUNK 10
-#define FACE 0.5
+#define CHUNK 25
+#define FACE 1.0
+#define ROTATION_SPEED 0.04
 
 class Block
 {
@@ -79,7 +80,7 @@ void handleCollision(float x, float y, float z, Block blocks[CHUNK])
     for (int i = 0; i < CHUNK; i++)
     {
         bool blocking = false;
-        if (blocks[i].y >= ty && blocks[i].y <= py)
+        if (blocks[i].y >= ty && blocks[i].y <= py && blocks[i].loaded)
         {
             for (int j = 0; j < 8; j += 2)
             {
@@ -88,17 +89,6 @@ void handleCollision(float x, float y, float z, Block blocks[CHUNK])
                 int newJ = j + 2 > 7 ? 0 : j + 2;
                 float x2 = blocks[i].x + corners[newJ];
                 float z2 = blocks[i].z + corners[newJ + 1];
-                float extend = 0.35;
-                if (z1 == z2)
-                {
-                    x1 = x1 > x2 ? x1 + extend : x1 - extend;
-                    x2 = x1 > x2 ? x2 - extend : x2 + extend;
-                }
-                else
-                {
-                    z1 = z1 > z2 ? z1 + extend : z1 - extend;
-                    z2 = z1 > z2 ? z2 - extend : z2 + extend;
-                }
                 float vx = dx + (x > 0 ? x + FACE : x - FACE);
                 float vz = dz + (z > 0 ? z + FACE : z - FACE);
                 bool behind = behindLine(vx, vz, x1, z1, x2, z2);
@@ -189,27 +179,27 @@ void cameraMovement(Block blocks[CHUNK])
     }
     if (keysPressed[4])
     {
-        u = Quarternion(flying ? U : T, 0.02);
+        u = Quarternion(flying ? U : T, ROTATION_SPEED);
     }
     if (keysPressed[5])
     {
-        u = Quarternion(flying ? U : T, -0.02);
+        u = Quarternion(flying ? U : T, -ROTATION_SPEED);
     }
     if (keysPressed[6])
     {
-        r = Quarternion(R, -0.02);
+        r = Quarternion(R, -ROTATION_SPEED);
     }
     if (keysPressed[7])
     {
-        r = Quarternion(R, 0.02);
+        r = Quarternion(R, ROTATION_SPEED);
     }
     if (keysPressed[8] && flying)
     {
-        d = Quarternion(D, -0.02);
+        d = Quarternion(D, -ROTATION_SPEED);
     }
     if (keysPressed[9] && flying)
     {
-        d = Quarternion(D, 0.02);
+        d = Quarternion(D, ROTATION_SPEED);
     }
 
     t = d * r * u;
@@ -231,11 +221,6 @@ void onFloor(Block blocks[CHUNK])
     for (int i = 0; i < CHUNK; i++)
     {
         int next_y = py + PLAYER_HEIGHT;
-        if (next_y > 5)
-        {
-            standing = true;
-            break;
-        }
         if (!blocks[i].loaded)
             continue;
         if (fabs(dx - blocks[i].x) > 0.75 || fabs(dz - blocks[i].z) > 0.75 || py > blocks[i].y)
@@ -261,7 +246,7 @@ void falling(Block blocks[CHUNK])
     }
     else if (y_v > 0)
     {
-        accelerate(&y_v, 0.0, -0.1);
+        y_v = 0;
     }
     dy += y_v;
 }
@@ -275,7 +260,30 @@ int main()
     LoadObject((char *)"water_cube.txt");
     Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 12.0, 3.0 / 4.0);
     Block blocks[CHUNK] = {
-        Block(&objects[0], 0, 4, -5)};
+        Block(&objects[0], 0, 3, -1),
+        Block(&objects[0], -1, 3, -1),
+        Block(&objects[0], 0, 3, 0),
+        Block(&objects[0], 0, 3, -2),
+        Block(&objects[0], 1, 3, 0),
+        Block(&objects[0], 1, 3, -2),
+        Block(&objects[0], 0, 4, -3),
+        Block(&objects[0], 0, 4, -4),
+        Block(&objects[0], 0, 5, -5),
+        Block(&objects[1], 0, 5, -6),
+        Block(&objects[1], 1, 5, -6),
+        Block(&objects[1], -1, 5, -6),
+        Block(&objects[1], 0, 5, -7),
+        Block(&objects[1], 1, 5, -7),
+        Block(&objects[1], -1, 5, -7),
+        Block(&objects[1], 0, 5, -8),
+        Block(&objects[1], 0, 5, -10),
+        Block(&objects[1], 0, 5, -11),
+        Block(&objects[1], 1, 5, -11),
+        Block(&objects[1], -1, 5, -11),
+        Block(&objects[0], 0, 4, -12),
+        Block(&objects[0], 1, 4, -12),
+        Block(&objects[0], -1, 4, -12)
+        };
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -371,7 +379,7 @@ int main()
                     if (eType && !flying && standing)
                     {
                         standing = false;
-                        y_v -= 0.18;
+                        y_v -= 0.25;
                     }
                     break;
                 case SDLK_ESCAPE:
