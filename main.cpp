@@ -14,7 +14,7 @@ using namespace std;
 #define PLAYER_HEIGHT 3
 #define MOVEMENT_SPEED 0.1
 #define CHUNK 10
-#define FACE 1.0
+#define FACE 0.5
 
 class Block
 {
@@ -78,6 +78,7 @@ void handleCollision(float x, float y, float z, Block blocks[CHUNK])
     int ty = py - 2;
     for (int i = 0; i < CHUNK; i++)
     {
+        bool blocking = false;
         if (blocks[i].y >= ty && blocks[i].y <= py)
         {
             for (int j = 0; j < 8; j += 2)
@@ -87,26 +88,28 @@ void handleCollision(float x, float y, float z, Block blocks[CHUNK])
                 int newJ = j + 2 > 7 ? 0 : j + 2;
                 float x2 = blocks[i].x + corners[newJ];
                 float z2 = blocks[i].z + corners[newJ + 1];
+                float extend = 0.35;
+                if (z1 == z2)
+                {
+                    x1 = x1 > x2 ? x1 + extend : x1 - extend;
+                    x2 = x1 > x2 ? x2 - extend : x2 + extend;
+                }
+                else
+                {
+                    z1 = z1 > z2 ? z1 + extend : z1 - extend;
+                    z2 = z1 > z2 ? z2 - extend : z2 + extend;
+                }
                 float vx = dx + (x > 0 ? x + FACE : x - FACE);
                 float vz = dz + (z > 0 ? z + FACE : z - FACE);
                 bool behind = behindLine(vx, vz, x1, z1, x2, z2);
                 int overlap = boxesOverlap(dx, dz, vx, vz, x1, z1, x2, z2);
-                if (behind && overlap)
+                if (behind && overlap && !blocking)
                 {
+                    blocking = true;
                     float *newVector = vectorProjection(x, z, x2 - x1, z2 - z1);
-                    if ((x > 0 && *newVector < 0) ||
-                        (x < 0 && *newVector > 0) ||
-                        (z < 0 && *(newVector + 1) > 0) ||
-                        (z < 0 && *(newVector + 1) > 0))
-                    {
-                        x = 0;
-                        z = 0;
-                    }
-                    else
-                    {
-                        x = *newVector;
-                        z = *(newVector + 1);
-                    }
+
+                    x = *newVector;
+                    z = *(newVector + 1);
                 }
             }
         }
@@ -223,9 +226,7 @@ void cameraMovement(Block blocks[CHUNK])
 
 void onFloor(Block blocks[CHUNK])
 {
-    int px = (int)round(dx);
     int py = (int)round(dy);
-    int pz = (int)round(dz);
     standing = false;
     for (int i = 0; i < CHUNK; i++)
     {
@@ -237,7 +238,7 @@ void onFloor(Block blocks[CHUNK])
         }
         if (!blocks[i].loaded)
             continue;
-        if (px != blocks[i].x || pz != blocks[i].z || py > blocks[i].y)
+        if (fabs(dx - blocks[i].x) > 0.75 || fabs(dz - blocks[i].z) > 0.75 || py > blocks[i].y)
             continue;
         if (next_y > blocks[i].y)
         {
@@ -272,13 +273,9 @@ int main()
     LoadObject((char *)"grass_cube.txt");
     LoadObject((char *)"sand_cube.txt");
     LoadObject((char *)"water_cube.txt");
-    Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 10.0, 3.0 / 4.0);
+    Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 12.0, 3.0 / 4.0);
     Block blocks[CHUNK] = {
-        Block(&objects[0], 0, 4, -5),
-        Block(&objects[0], 1, 3, -5),
-        Block(&objects[0], 1, 3, -4),
-        Block(&objects[0], 0, 3, -5),
-        Block(&objects[0], 0, 4, -4)};
+        Block(&objects[0], 0, 4, -5)};
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
