@@ -77,6 +77,7 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
     float u = left.u + gradients.uXStep * xPrestep;
     float v = left.v + gradients.vXStep * xPrestep;
     float ooz = left.ooz + gradients.oozXStep * xPrestep;
+    Color color = left.color + gradients.colorXStep * xPrestep;
     float zMin = left.z;
     float zMax = right.z;
 
@@ -97,10 +98,15 @@ void drawScanLine(Gradients gradients, Edge left, Edge right, int y, float zBuff
                 int tindex = (yPix * texture->width) + xPix;
                 graphicsDrawPoint(x, y, texture->pixels[tindex].R, texture->pixels[tindex].G, texture->pixels[tindex].B);
             }
+            else
+            {
+                graphicsDrawPoint(x, y, color.R, color.G, color.B);
+            }
         }
         u += gradients.uXStep;
         v += gradients.vXStep;
         ooz += gradients.oozXStep;
+        color = color + gradients.colorXStep;
     }
 }
 
@@ -121,12 +127,12 @@ void scanEdge(Gradients gradients, Edge *A, Edge *B, bool orientation, float zBu
     }
 }
 
-void fillTriangle(Point3D points[3], Point3D texels[3], float zBuffer[WIDTH * HEIGHT], int tex)
+void fillTriangle(Point3D points[3], Point3D texels[3], Color colors[3], float zBuffer[WIDTH * HEIGHT], int tex)
 {
-    Gradients gradients = Gradients(points, texels);
-    Edge *topToBottom = new Edge(gradients, points[0], points[2], texels[0]);
-    Edge *topToMiddle = new Edge(gradients, points[0], points[1], texels[0]);
-    Edge *middleToBottom = new Edge(gradients, points[1], points[2], texels[1]);
+    Gradients gradients = Gradients(points, texels, colors);
+    Edge *topToBottom = new Edge(gradients, points[0], points[2], texels[0], colors[0]);
+    Edge *topToMiddle = new Edge(gradients, points[0], points[1], texels[0], colors[0]);
+    Edge *middleToBottom = new Edge(gradients, points[1], points[2], texels[1], colors[1]);
 
     bool orientation = triangleOrientation(points);
     scanEdge(gradients, topToBottom, topToMiddle, orientation, zBuffer, tex);
@@ -136,7 +142,7 @@ void fillTriangle(Point3D points[3], Point3D texels[3], float zBuffer[WIDTH * HE
     delete middleToBottom;
 }
 
-void sortTriangle(Point3D nPoints[3], Point3D texels[3], float zBuffer[WIDTH * HEIGHT], int tex)
+void sortTriangle(Point3D nPoints[3], Point3D texels[3], Color colors[3], float zBuffer[WIDTH * HEIGHT], int tex)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -146,13 +152,14 @@ void sortTriangle(Point3D nPoints[3], Point3D texels[3], float zBuffer[WIDTH * H
             {
                 swap(nPoints[j], nPoints[i]);
                 swap(texels[j], texels[i]);
+                swap(colors[j], colors[i]);
             }
         }
     }
-    fillTriangle(nPoints, texels, zBuffer, tex);
+    fillTriangle(nPoints, texels, colors, zBuffer, tex);
 }
 
-void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES], int count, float zBuffer[WIDTH * HEIGHT], int tex)
+void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES], Color colors[MAX_VERTICES], int count, float zBuffer[WIDTH * HEIGHT], int tex)
 {
     float x, y, z;
     for (int i = 0; i < count; i++)
@@ -166,6 +173,7 @@ void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES]
     }
     Point3D start = nPoints[0];
     Point3D startTex = texels[0];
+    Color startColor = colors[0];
     for (int i = 1; i < count - 1; i++)
     {
         Point3D group[3] = {
@@ -176,16 +184,22 @@ void createTriangles(Point3D nPoints[MAX_VERTICES], Point3D texels[MAX_VERTICES]
             Point3D(startTex.getX(), startTex.getY(), startTex.getZ(), startTex.getW()),
             Point3D(texels[i].getX(), texels[i].getY(), texels[i].getZ(), texels[i].getW()),
             Point3D(texels[i + 1].getX(), texels[i + 1].getY(), texels[i + 1].getZ(), texels[i + 1].getW())};
-        sortTriangle(group, texGroup, zBuffer, tex);
+        Color colorGroup[3] = {
+            Color(startColor.R, startColor.G, startColor.B, startColor.A),
+            Color(colors[i].R, colors[i].G, colors[i].B, colors[i].A),
+            Color(colors[i + 1].R, colors[i + 1].G, colors[i + 1].B, colors[i + 1].A)};
+        sortTriangle(group, texGroup, colorGroup, zBuffer, tex);
     }
 }
 
-int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], int count, int component, float componentFactor, Point3D results[MAX_VERTICES], Point3D texelResults[MAX_VERTICES])
+int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], Color colors[MAX_VERTICES], int count, int component, float componentFactor, Point3D results[MAX_VERTICES], Point3D texelResults[MAX_VERTICES], Color colorResults[MAX_VERTICES])
 {
     int resultCount = 0;
     Point3D previousPoint = vertices[count - 1];
     Point3D previousTexel = texels[count - 1];
+    Color previousColor = colors[count - 1];
     Point3D *p, *tp;
+    Color *c;
     float previousComponent = previousPoint.getComponent(component) * componentFactor;
     bool previousNotClipped = previousComponent <= previousPoint.getW();
     for (int i = 0; i < count; i++)
@@ -193,6 +207,7 @@ int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTIC
         bool added = false;
         Point3D currentPoint = vertices[i];
         Point3D currentTexel = texels[i];
+        Color currentColor = colors[i];
         float currentComponent = currentPoint.getComponent(component) * componentFactor;
         bool currentNotClipped = (currentComponent <= currentPoint.getW());
         if (currentNotClipped ^ previousNotClipped)
@@ -219,6 +234,13 @@ int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTIC
             newPoint = lerpPoint(currentTexel, previousTexel, ratio);
             tp->setX(newPoint.getX());
             tp->setY(newPoint.getY());
+
+            c = &colorResults[resultCount - 1];
+            Color newColor = lerpColor(currentColor, previousColor, ratio);
+            c->R = newColor.R;
+            c->G = newColor.G;
+            c->B = newColor.B;
+            c->A = newColor.A;
         }
 
         if (currentNotClipped)
@@ -239,31 +261,39 @@ int clipPointComponent(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTIC
             tp = &texelResults[resultCount - 1];
             tp->setX(currentTexel.getX());
             tp->setY(currentTexel.getY());
+
+            c = &colorResults[resultCount - 1];
+            c->R = currentColor.R;
+            c->G = currentColor.G;
+            c->B = currentColor.B;
+            c->A = currentColor.A;
         }
         previousPoint = currentPoint;
         previousTexel = currentTexel;
+        previousColor = currentColor;
         previousComponent = currentComponent;
         previousNotClipped = currentNotClipped;
     }
     return resultCount;
 }
 
-int clipPointAxis(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], int component, int nVertices)
+int clipPointAxis(Point3D vertices[MAX_VERTICES], Point3D texels[MAX_VERTICES], Color colors[MAX_VERTICES], int component, int nVertices)
 {
     Point3D auxVertices[MAX_VERTICES];
     Point3D auxTexels[MAX_VERTICES];
-    int count1 = clipPointComponent(vertices, texels, nVertices, component, 1.0, auxVertices, auxTexels);
+    Color auxColors[MAX_VERTICES];
+    int count1 = clipPointComponent(vertices, texels, colors, nVertices, component, 1.0, auxVertices, auxTexels, auxColors);
 
     if (count1 == 0)
     {
         return 0;
     }
 
-    int count2 = clipPointComponent(auxVertices, auxTexels, count1, component, -1.0, vertices, texels);
+    int count2 = clipPointComponent(auxVertices, auxTexels, auxColors, count1, component, -1.0, vertices, texels, colors);
     return count2;
 }
 
-void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], int tex, float zBuffer[WIDTH * HEIGHT])
+void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3], float v[3], Color colors[3], int tex, float zBuffer[WIDTH * HEIGHT])
 {
     float wz[3];
     Matrix projectedPoints[3];
@@ -290,13 +320,22 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
     }
     if (outside[0] && outside[1] && outside[2])
         return;
-    int vCount = clipPointAxis(pPoints, texels, 0, 3);
-    vCount = clipPointAxis(pPoints, texels, 1, vCount);
-    vCount = clipPointAxis(pPoints, texels, 2, vCount);
+    int vCount = clipPointAxis(pPoints, texels, colors, 0, 3);
+    vCount = clipPointAxis(pPoints, texels, colors, 1, vCount);
+    vCount = clipPointAxis(pPoints, texels, colors, 2, vCount);
     if (vCount > 2)
     {
-        createTriangles(pPoints, texels, vCount, zBuffer, tex);
+        createTriangles(pPoints, texels, colors, vCount, zBuffer, tex);
     }
+}
+
+Color lerpColor(Color c2, Color c1, float t)
+{
+    return Color(
+        c2.R * t + c1.R * (1 - t),
+        c2.G * t + c1.G * (1 - t),
+        c2.B * t + c1.B * (1 - t),
+        c2.A * t + c1.A * (1 - t));
 }
 
 Point3D lerpPoint(Point3D p2, Point3D p1, float t)
@@ -500,7 +539,7 @@ void Point3D::print()
     printf("x: %.2f\ny: %.2f\nz: %.2f\n", this->x, this->y, this->z);
 }
 
-Gradients::Gradients(Point3D points[3], Point3D texels[3])
+Gradients::Gradients(Point3D points[3], Point3D texels[3], Color colors[3])
 {
     float y02 = points[0].getY() - points[2].getY();
     float y12 = points[1].getY() - points[2].getY();
@@ -509,6 +548,12 @@ Gradients::Gradients(Point3D points[3], Point3D texels[3])
 
     float oodx = 1 / (x12 * y02 - x02 * y12);
     float oody = -oodx;
+
+    // Color gradient
+    Color co02 = colors[0] - colors[2];
+    Color co12 = colors[1] - colors[2];
+    colorXStep = (co12 * y02 - co02 * y12) * oodx;
+    colorYStep = (co12 * x02 - co02 * x12) * oody;
 
     // z gradient
     float c02 = (points[0].getZ()) - (points[2].getZ());
@@ -539,7 +584,7 @@ Gradients::Gradients(Point3D points[3], Point3D texels[3])
     vYStep = (c12 * x02 - c02 * x12) * oody;
 }
 
-Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, Point3D minYTexel)
+Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, Point3D minYTexel, Color minYColor)
 {
     yStart = (int)ceil(minYPoint.getY());
     yEnd = (int)ceil(maxYPoint.getY());
@@ -551,6 +596,9 @@ Edge::Edge(Gradients gradients, Point3D minYPoint, Point3D maxYPoint, Point3D mi
     xStep = dx / dy;
     x = minYPoint.getX() + yPrestep * xStep;
     float xPrestep = x - minYPoint.getX();
+
+    color = minYColor + gradients.colorYStep * yPrestep + gradients.colorXStep * xPrestep;
+    colorStep = gradients.colorYStep + (gradients.colorXStep * xStep);
 
     z = (minYPoint.getZ()) + gradients.zYStep * yPrestep + gradients.zXStep * xPrestep;
     zStep = gradients.zYStep + (gradients.zXStep * xStep);
@@ -572,6 +620,7 @@ void Edge::step()
     ooz += oozStep;
     u += uStep;
     v += vStep;
+    color = color + colorStep;
 }
 
 Triangle3D::Triangle3D()
@@ -579,6 +628,15 @@ Triangle3D::Triangle3D()
     this->points[0] = -1;
     this->points[1] = -1;
     this->points[2] = -1;
+    this->colors[0] = Color(0xff, 0x00, 0x00, 0x00);
+    this->colors[1] = Color(0xff, 0x00, 0x00, 0x00);
+    this->colors[2] = Color(0xff, 0x00, 0x00, 0x00);
+    this->texture = -1;
+    for (int i = 0; i < 3; i++)
+    {
+        this->uTexels[i] = 0.0;
+        this->vTexels[i] = 0.0;
+    }
 }
 
 Triangle3D::~Triangle3D()
@@ -895,7 +953,7 @@ void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy
             p.translate(dx, dy, dz);
             movedPoints[j] = p;
         }
-        drawTriangle(floor(i / 2.0), P, V, movedPoints, this->triangles[i].uTexels, this->triangles[i].vTexels, this->triangles[i].getTexture(), zBuffer);
+        drawTriangle(floor(i / 2.0), P, V, movedPoints, this->triangles[i].uTexels, this->triangles[i].vTexels, this->triangles[i].colors, this->triangles[i].getTexture(), zBuffer);
     }
 }
 

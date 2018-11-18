@@ -63,7 +63,8 @@ public:
   float zXStep, zYStep;
   float uXStep, uYStep;
   float vXStep, vYStep;
-  Gradients(Point3D[3], Point3D[3]);
+  Color colorXStep, colorYStep;
+  Gradients(Point3D[3], Point3D[3], Color[3]);
 };
 
 class Edge
@@ -77,8 +78,10 @@ public:
   float oozStep;
   float u, v;
   float uStep, vStep;
+  Color color;
+  Color colorStep;
   Edge();
-  Edge(Gradients, Point3D, Point3D, Point3D);
+  Edge(Gradients, Point3D, Point3D, Point3D, Color);
   void step();
 };
 
@@ -112,6 +115,7 @@ class Triangle3D
 
 public:
   float uTexels[3], vTexels[3];
+  Color colors[3];
   Triangle3D();
   ~Triangle3D();
   int getPoint(int);
@@ -173,7 +177,8 @@ int boxesOverlap(float, float, float, float, float, float, float, float);
 float *vectorProjection(float, float, float, float);
 bool triangleOrientation(Point3D[3]);
 void scanEdge(Gradients, Edge *, Edge *, bool, float[WIDTH * HEIGHT], int);
-void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], int, float[WIDTH * HEIGHT]);
+void drawTriangle(int, Matrix *, Matrix *, Point3D[3], float[3], float[3], Color[3], int, float[WIDTH * HEIGHT]);
+Color lerpColor(Color, Color, float);
 Point3D lerpPoint(Point3D, Point3D, float);
 Matrix viewMatrix(Point3D, Point3D, Point3D, float, float, float);
 
