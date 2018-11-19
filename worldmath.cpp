@@ -300,6 +300,7 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
     Point3D nPoints[3];
     Point3D pPoints[MAX_VERTICES];
     Point3D texels[MAX_VERTICES];
+    Color pColors[MAX_VERTICES] = {colors[0], colors[1], colors[2]};
     bool outside[3] = {0, 0, 0};
     float x, y, z;
     for (int i = 0; i < 3; i++)
@@ -320,12 +321,12 @@ void drawTriangle(int cIndex, Matrix *P, Matrix *V, Point3D points[3], float u[3
     }
     if (outside[0] && outside[1] && outside[2])
         return;
-    int vCount = clipPointAxis(pPoints, texels, colors, 0, 3);
-    vCount = clipPointAxis(pPoints, texels, colors, 1, vCount);
-    vCount = clipPointAxis(pPoints, texels, colors, 2, vCount);
+    int vCount = clipPointAxis(pPoints, texels, pColors, 0, 3);
+    vCount = clipPointAxis(pPoints, texels, pColors, 1, vCount);
+    vCount = clipPointAxis(pPoints, texels, pColors, 2, vCount);
     if (vCount > 2)
     {
-        createTriangles(pPoints, texels, colors, vCount, zBuffer, tex);
+        createTriangles(pPoints, texels, pColors, vCount, zBuffer, tex);
     }
 }
 

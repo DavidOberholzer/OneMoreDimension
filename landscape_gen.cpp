@@ -10,20 +10,20 @@
 
 using namespace std;
 
-#define CHANGE 4
-#define SIZE 25
+#define CHANGE 1
+#define SIZE 289
 #define ROTATION_SPEED 0.04
 #define MOVEMENT_SPEED 0.10
 
 static Object landscape;
 
 bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-Point3D U = Point3D(0, 1, 0, 0); // Camera True Up vector
-Point3D R = Point3D(1, 0, 0, 0); // Camera True Right vector
-Point3D D = Point3D(0, 0, 1, 0); // Camera True Directional vector
-float dx = 0.0;					 // Player x position
-float dy = 0.0;					 // Player y position
-float dz = 0.0;					 // Player z position
+Point3D U = Point3D(0, 1, 0, 0);						   // Camera True Up vector
+Point3D R = Point3D(-sin(M_PI / 4), 0, sin(M_PI / 4), 0);  // Camera True Right vector
+Point3D D = Point3D(-sin(M_PI / 4), 0, -sin(M_PI / 4), 0); // Camera True Directional vector
+float dx = -4.0;										   // Player x position
+float dy = -5.0;										   // Player y position
+float dz = -4.0;										   // Player z position
 Quarternion t;
 
 void cameraMovement()
@@ -32,30 +32,29 @@ void cameraMovement()
 	bool ub = false, rb = false, db = false;
 	Point3D ws = D.scaledVector(MOVEMENT_SPEED);
 	Point3D ad = R.scaledVector(MOVEMENT_SPEED);
-	float x = 0, y = 0, z = 0;
 	if (keysPressed[0])
 	{
-		x -= ws.getX();
-		y -= ws.getY();
-		z -= ws.getZ();
+		dx -= ws.getX();
+		dy -= ws.getY();
+		dz -= ws.getZ();
 	}
 	if (keysPressed[1])
 	{
-		x += ws.getX();
-		y += ws.getY();
-		z += ws.getZ();
+		dx += ws.getX();
+		dy += ws.getY();
+		dz += ws.getZ();
 	}
 	if (keysPressed[2])
 	{
-		x -= ad.getX();
-		y -= ad.getY();
-		z -= ad.getZ();
+		dx -= ad.getX();
+		dy -= ad.getY();
+		dz -= ad.getZ();
 	}
 	if (keysPressed[3])
 	{
-		x += ad.getX();
-		y += ad.getY();
-		z += ad.getZ();
+		dx += ad.getX();
+		dy += ad.getY();
+		dz += ad.getZ();
 	}
 	if (keysPressed[4])
 	{
@@ -103,9 +102,9 @@ int lerpColorComponent(int max, int min, int height, int start, int end)
 Color getHeightColor(int array[], int index)
 {
 	return Color(
-		lerpColorComponent(20, 0, array[index], 0x00, 0xff),
-		lerpColorComponent(5, -5, array[index], 0x00, 0xff),
-		lerpColorComponent(0, -20, array[index], 0xff, 0x00),
+		lerpColorComponent(3, -5, array[index], 0xff, 0x00),
+		lerpColorComponent(2, -2, array[index], 0x00, 0xff),
+		lerpColorComponent(5, -3, array[index], 0x00, 0xff),
 		0x00);
 }
 
@@ -274,19 +273,18 @@ void initializeLandscape(int h0, int h1, int h2, int h3)
 		array[i] = 0;
 
 	generateMap(array, length, h0, h1, h2, h3);
-	// printArray(array, length);
+	printArray(array, length);
 	landscape.numVertices = SIZE;
 	landscape.vertices = (Point3D *)malloc(landscape.numVertices * sizeof(*landscape.vertices));
 	landscape.numTriangles = (length - 1) * (length - 1) * 2;
 	landscape.triangles = (Triangle3D *)malloc(landscape.numTriangles * sizeof(*landscape.triangles));
 	for (int z = 0; z < length; z++)
 	{
-		cout << "z: " << z << endl;
+		// cout << "z: " << z << endl;
 		for (int x = 0; x < length; x++)
 		{
-			cout << "x: " << x << endl;
 			int index0 = z * length + x;
-			cout << "index0: " << index0 + 1 << endl;
+			// cout << "x: " << x << endl;
 			landscape.vertices[index0].setX(x);
 			landscape.vertices[index0].setZ(z);
 			landscape.vertices[index0].setY(array[index0]);
@@ -296,12 +294,6 @@ void initializeLandscape(int h0, int h1, int h2, int h3)
 				int index1 = (z + 1) * length + x;
 				int index2 = (z + 1) * length + (x + 1);
 				int index3 = z * length + (x + 1);
-
-				cout << "triangle_index: " << triangle_index << endl;
-				// cout << "index0: " << index0 + 1 << endl;
-				cout << "index1: " << index1 + 1 << endl;
-				cout << "index2: " << index2 + 1 << endl;
-				cout << "index3: " << index3 + 1 << endl;
 
 				Color c0 = getHeightColor(array, index0);
 				Color c1 = getHeightColor(array, index1);
@@ -332,9 +324,11 @@ void initializeLandscape(int h0, int h1, int h2, int h3)
 
 int main()
 {
-	initializeLandscape(1, 4, 6, 12);
+	Quarternion q = Quarternion(R, 0.5);
+	U = q * U;
+	initializeLandscape(7, 4, 3, -10);
 	bool done = false;
-	Matrix *P = new Matrix(1, 15, M_PI * 5.0 / 12.0, 3.0 / 4.0);
+	Matrix *P = new Matrix(1, 60, M_PI * 5.0 / 12.0, 3.0 / 4.0);
 	graphicsStartup();
 	time_t start, end;
 	float zBuffer[WIDTH * HEIGHT];
@@ -413,5 +407,6 @@ int main()
 		}
 	}
 	graphicsShutdown();
+	delete P;
 	return 0;
 }
