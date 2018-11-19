@@ -26,6 +26,7 @@ float dz = -6.0;										   // Player z position
 Quarternion t;
 int change = 0;
 int SIZE = 289;
+int max_height = -3000; // random high number
 
 void cameraMovement()
 {
@@ -80,24 +81,25 @@ void cameraMovement()
 	D = t * D;
 }
 
-int clamp(int max, int min, int value)
-{
-	return value < max ? (value > min ? value : min) : max;
-}
-
 int lerpColorComponent(int max, int min, int height, int start, int end)
 {
-	int value = clamp(max, min, height);
-	float t = (value - min) / (max - min);
-	return end * t + start * (1 - t);
+	if (height > max || height < min)
+		return 0x00;
+	float t = (height - min) / (float)(max - min);
+	int result = end * t + start * (1 - t);
+	return result;
 }
 
 Color getHeightColor(int array[], int index)
 {
+	int middle = max_height / 3.0;
+	int r = lerpColorComponent(0, -max_height, array[index], 0x00, 0xff);
+	int g = lerpColorComponent(middle, -middle, array[index], 0x00, 0xff);
+	int b = lerpColorComponent(max_height, 0, array[index], 0x00, 0xff);
 	return Color(
-		lerpColorComponent(3, -5, array[index], 0xff, 0x00),
-		lerpColorComponent(2, -2, array[index], 0x00, 0xff),
-		lerpColorComponent(5, -3, array[index], 0x00, 0xff),
+		r,
+		g,
+		b,
 		0x00);
 }
 
@@ -219,6 +221,11 @@ void printArray(int array[], int length)
 
 void generateMap(int array[], int size, int h0, int h1, int h2, int h3)
 {
+	if (size < 2)
+	{
+		cout << "Array size too small. Valid size is should be of the form '2^n + 1', where 'n' in a whole number." << endl;
+		exit(1);
+	}
 	int value = size - 1;
 
 	// Check for invalid array size
@@ -227,11 +234,16 @@ void generateMap(int array[], int size, int h0, int h1, int h2, int h3)
 	{
 		if (value % 2 != 0)
 		{
-			cout << "Invalid Array Size. Valid size is should be of the form '2^n - 1', where 'n' in a whole number." << endl;
+			cout << "Invalid Array Size. Valid size is should be of the form '2^n + 1', where 'n' in a whole number." << endl;
 			exit(1);
 		}
 		value = value / 2;
 		n++;
+	}
+	if (n == 0)
+	{
+		cout << "Invalid Array Size. Valid size is should be of the form '2^n + 1', where 'n' in a whole number." << endl;
+		exit(1);
 	}
 	int index0 = 0;
 	int index1 = size - 1;
@@ -326,6 +338,8 @@ int main()
 	{
 		cout << "Enter corner " << i << " height: " << endl;
 		cin >> h[i];
+		if (abs(h[i]) > max_height)
+			max_height = abs(h[i]);
 	}
 
 	cout << "Enter variance: " << endl;
