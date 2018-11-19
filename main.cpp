@@ -282,8 +282,7 @@ int main()
         Block(&objects[1], -1, 5, -11),
         Block(&objects[0], 0, 4, -12),
         Block(&objects[0], 1, 4, -12),
-        Block(&objects[0], -1, 4, -12)
-        };
+        Block(&objects[0], -1, 4, -12)};
     time_t start, end;
     float angle = 0.0;
     float zBuffer[WIDTH * HEIGHT];
@@ -300,6 +299,9 @@ int main()
         }
         graphicsFrameReady();
         Matrix V = viewMatrix(U, R, D, dx, dy, dz);
+        objects[0].drawObject(0, sin(0.5), angle, -1, -3, 0, P, &V, zBuffer);
+        objects[1].drawObject(0, 0, angle * 4, 0, -3, -3, P, &V, zBuffer);
+        objects[2].drawObject(0, sin(M_PI / 2), angle * 2, 1, -3, 0, P, &V, zBuffer);
         for (int i = 0; i < CHUNK; i++)
         {
             if (!blocks[i].loaded)
