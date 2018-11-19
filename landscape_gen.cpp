@@ -17,13 +17,14 @@ using namespace std;
 
 static Object landscape;
 
-bool keysPressed[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+bool keysPressed[8] = {0, 0, 0, 0, 0, 0, 0, 0};
 Point3D U = Point3D(0, 1, 0, 0);						   // Camera True Up vector
 Point3D R = Point3D(-sin(M_PI / 4), 0, sin(M_PI / 4), 0);  // Camera True Right vector
 Point3D D = Point3D(-sin(M_PI / 4), 0, -sin(M_PI / 4), 0); // Camera True Directional vector
-float dx = -4.0;										   // Player x position
+Point3D T = Point3D(0, 1, 0, 0);						   // Camera FPS Up vector
+float dx = -6.0;										   // Player x position
 float dy = -5.0;										   // Player y position
-float dz = -4.0;										   // Player z position
+float dz = -6.0;										   // Player z position
 Quarternion t;
 
 void cameraMovement()
@@ -58,11 +59,11 @@ void cameraMovement()
 	}
 	if (keysPressed[4])
 	{
-		u = Quarternion(U, ROTATION_SPEED);
+		u = Quarternion(T, ROTATION_SPEED);
 	}
 	if (keysPressed[5])
 	{
-		u = Quarternion(U, -ROTATION_SPEED);
+		u = Quarternion(T, -ROTATION_SPEED);
 	}
 	if (keysPressed[6])
 	{
@@ -71,14 +72,6 @@ void cameraMovement()
 	if (keysPressed[7])
 	{
 		r = Quarternion(R, ROTATION_SPEED);
-	}
-	if (keysPressed[8])
-	{
-		d = Quarternion(D, -ROTATION_SPEED);
-	}
-	if (keysPressed[9])
-	{
-		d = Quarternion(D, ROTATION_SPEED);
 	}
 
 	t = d * r * u;
@@ -384,12 +377,6 @@ int main()
 					break;
 				case SDLK_h:
 					keysPressed[7] = eType;
-					break;
-				case SDLK_t:
-					keysPressed[8] = eType;
-					break;
-				case SDLK_u:
-					keysPressed[9] = eType;
 					break;
 				case SDLK_ESCAPE:
 					done = true;
