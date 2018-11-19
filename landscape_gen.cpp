@@ -10,8 +10,6 @@
 
 using namespace std;
 
-#define CHANGE 1
-#define SIZE 289
 #define ROTATION_SPEED 0.04
 #define MOVEMENT_SPEED 0.10
 
@@ -26,6 +24,8 @@ float dx = -6.0;										   // Player x position
 float dy = -5.0;										   // Player y position
 float dz = -6.0;										   // Player z position
 Quarternion t;
+int change = 0;
+int SIZE = 289;
 
 void cameraMovement()
 {
@@ -104,7 +104,7 @@ Color getHeightColor(int array[], int index)
 int variance()
 {
 	// Give a random number between -CHANGE/2 and +CHANGE/2
-	return rand() % (CHANGE + 1) - (CHANGE / 2);
+	return rand() % (change + 1) - (change / 2);
 }
 
 void squareStep(int array[], int step, int size, int *nextStep)
@@ -317,9 +317,23 @@ void initializeLandscape(int h0, int h1, int h2, int h3)
 
 int main()
 {
+	int size = 0;
+	cout << "Enter array side length: " << endl;
+	cin >> size;
+	SIZE = size * size;
+	int h[4];
+	for (int i = 0; i < 4; i++)
+	{
+		cout << "Enter corner " << i << " height: " << endl;
+		cin >> h[i];
+	}
+
+	cout << "Enter variance: " << endl;
+	cin >> change;
+
 	Quarternion q = Quarternion(R, 0.5);
 	U = q * U;
-	initializeLandscape(7, 4, 3, -10);
+	initializeLandscape(h[0], h[1], h[2], h[3]);
 	bool done = false;
 	Matrix *P = new Matrix(1, 60, M_PI * 5.0 / 12.0, 3.0 / 4.0);
 	graphicsStartup();
