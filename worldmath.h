@@ -6,22 +6,22 @@
 
 class Color
 {
-  public:
-	float R, G, B, A;
-	Color();
-	Color(float, float, float, float);
-	Color operator+(Color);
-	Color operator-(Color);
-	Color operator*(float);
+public:
+  float R, G, B, A;
+  Color();
+  Color(float, float, float, float);
+  Color operator+(Color);
+  Color operator-(Color);
+  Color operator*(float);
 };
 
 static Color colors[6] = {
-	Color(0x00, 0x00, 0xff, 0xff),
-	Color(0x00, 0xff, 0x00, 0xff),
-	Color(0xff, 0x00, 0x00, 0xff),
-	Color(0xff, 0xff, 0x00, 0xff),
-	Color(0xff, 0x00, 0xff, 0xff),
-	Color(0xff, 0xff, 0xff, 0xff)};
+    Color(0x00, 0x00, 0xff, 0xff),
+    Color(0x00, 0xff, 0x00, 0xff),
+    Color(0xff, 0x00, 0x00, 0xff),
+    Color(0xff, 0xff, 0x00, 0xff),
+    Color(0xff, 0x00, 0xff, 0xff),
+    Color(0xff, 0xff, 0xff, 0xff)};
 
 class Point3D
 {
@@ -133,21 +133,6 @@ public:
   void setTexture(int);
 };
 
-class Object
-{
-public:
-  char *name;
-  Point3D *vertices;
-  Triangle3D *triangles;
-  int numVertices, numTriangles;
-  Object();
-  Object(char *);
-  ~Object();
-  void mallocVertices(Point3D *);
-  void mallocTriangles(Triangle3D *);
-  void drawObject(float, float, float, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
-};
-
 class Quarternion
 {
   float w, x, y, z;
@@ -169,6 +154,24 @@ public:
   Quarternion inverse();
   Quarternion operator*(Quarternion);
   Point3D operator*(Point3D);
+  float magnitudeSquared();
+  void normalize();
+};
+
+class Object
+{
+public:
+  char *name;
+  Point3D *vertices;
+  Triangle3D *triangles;
+  int numVertices, numTriangles;
+  Object();
+  Object(char *);
+  ~Object();
+  void mallocVertices(Point3D *);
+  void mallocTriangles(Triangle3D *);
+  void drawObject(float, float, float, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
+  void drawObject(Quarternion, float, float, float, Matrix *, Matrix *, float[WIDTH * HEIGHT]);
 };
 
 int dotProduct(int, int, int, int, int, int);

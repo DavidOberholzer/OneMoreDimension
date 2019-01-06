@@ -20,6 +20,9 @@ Point3D D = Point3D(0, 0, 1, 0); // Camera True Directional vector
 float dx = 0.0;					 // Player x position
 float dy = 0.0;					 // Player y position
 float dz = 0.0;					 // Player z position
+Point3D oU = Point3D(0, 1, 0, 0);
+Point3D oR = Point3D(1, 0, 0, 0);
+Point3D oD = Point3D(0, 0, 1, 0);
 
 float qx = 0.0;
 float qy = 0.0;
@@ -31,7 +34,7 @@ int main()
 	asio::serial_port port(io);
 
 	port.open("/dev/ttyACM0");
-	port.set_option(asio::serial_port_base::baud_rate(9600));
+	port.set_option(asio::serial_port_base::baud_rate(115200));
 
 	char c;
 	int calibration = 0;
@@ -81,7 +84,13 @@ int main()
 		}
 		graphicsFrameReady();
 		Matrix V = viewMatrix(U, R, D, dx, dy, dz);
-		objects[0].drawObject(qz, qy, qx, 0, 0, -3, P, &V, zBuffer);
+
+		Quarternion qu = Quarternion(oU, -qx);
+		Quarternion qr = Quarternion(oR, -qy);
+		Quarternion qd = Quarternion(oD, -qz);
+		Quarternion t = qd * qr * qu;
+		t.normalize();
+		objects[0].drawObject(t, 0, 0, -3, P, &V, zBuffer);
 		graphicsFrameDraw();
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
