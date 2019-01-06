@@ -958,23 +958,6 @@ void Object::drawObject(float pitch, float yaw, float rAngle, float dx, float dy
     }
 }
 
-void Object::drawObject(Quarternion q, float dx, float dy, float dz, Matrix *P, Matrix *V, float zBuffer[WIDTH * HEIGHT])
-{
-    for (int i = 0; i < this->numTriangles; i++)
-    {
-        Triangle3D *t = &this->triangles[i];
-        Point3D movedPoints[3];
-        for (int j = 0; j < 3; j++)
-        {
-            Point3D p = this->vertices[t->getPoint(j) - 1];
-            p = q * p;
-            p.translate(dx, dy, dz);
-            movedPoints[j] = p;
-        }
-        drawTriangle(floor(i / 2.0), P, V, movedPoints, this->triangles[i].uTexels, this->triangles[i].vTexels, this->triangles[i].colors, this->triangles[i].getTexture(), zBuffer);
-    }
-}
-
 Quarternion::Quarternion()
 {
     this->w = 0;
@@ -1091,20 +1074,6 @@ Point3D Quarternion::operator*(Point3D p)
         result = p;
     }
     return result;
-}
-
-float Quarternion::magnitudeSquared() {
-    return this->x * this->x + this->y * this->y + this->z * this->z;
-}
-
-void Quarternion::normalize() {
-    float mag = this->magnitudeSquared();
-    float newX = sqrt((1 / mag) * this->x * this->x);
-    float newY = sqrt((1 / mag) * this->y * this->y);
-    float newZ = sqrt((1 / mag) * this->z * this->z);
-    this->x = this->x > 0 ? newX : -newX;
-    this->y = this->y > 0 ? newY : -newY;
-    this->z = this->z > 0 ? newZ : -newZ;
 }
 
 void Quarternion::print()
