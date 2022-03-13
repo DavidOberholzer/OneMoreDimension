@@ -11,8 +11,11 @@ using namespace std;
 void graphicsStartup()
 {
     cout << "Starting SDL Window!" << endl;
-    window = SDL_CreateWindow("OneMoreDimension", 0, 0, WIDTH, HEIGHT, 0);
-    surface = SDL_GetWindowSurface(window);
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    }
+    window = SDL_CreateWindow("OneMoreDimension", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIDTH, HEIGHT, SDL_WINDOW_SHOWN);
+    SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     renderer = SDL_CreateRenderer(window, -1, 0);
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, WIDTH, HEIGHT);
     SDL_ShowCursor(SDL_DISABLE);
